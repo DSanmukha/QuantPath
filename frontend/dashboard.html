@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard — QuantPath (static)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/quantpath/assets/css/tailwind.css">
+</head>
+<body class="min-h-screen bg-slate-50">
+  <header class="bg-white shadow p-4 flex justify-between items-center">
+    <div class="text-lg font-semibold">QuantPath</div>
+    <div class="flex items-center gap-3">
+      <div class="text-sm text-slate-600">Demo User</div>
+      <a href="simulation.html" class="px-3 py-2 bg-indigo-600 text-white rounded">Simulation</a>
+      <a href="index.html" class="px-3 py-2 bg-gray-200 rounded">Home</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <section class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-xl font-semibold mb-2">Saved Simulations (static)</h2>
+      <div class="grid gap-4">
+        <div class="p-4 border rounded">
+          <div class="font-medium">AAPL — GBM</div>
+          <div class="text-xs text-slate-500">Saved: 2025-02-01</div>
+          <div class="mt-2 text-sm text-slate-600">Params: S0=150.00; μ=0.05; σ=0.2; paths=200</div>
+        </div>
+        <div class="p-4 border rounded">
+          <div class="font-medium">MSFT — GBM</div>
+          <div class="text-xs text-slate-500">Saved: 2025-01-28</div>
+          <div class="mt-2 text-sm text-slate-600">Params: S0=320.00; μ=0.04; σ=0.18; paths=100</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white p-6 rounded shadow">
+      <h3 class="text-lg font-semibold mb-3">Recent Activity</h3>
+      <table class="w-full text-sm">
+        <thead class="text-left text-slate-500">
+          <tr><th>Symbol</th><th>Model</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="py-2">AAPL</td><td>GBM</td><td>2025-02-01</td></tr>
+          <tr><td class="py-2">MSFT</td><td>GBM</td><td>2025-01-28</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

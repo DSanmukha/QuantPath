@@ -1,0 +1,21 @@
+CREATE DATABASE IF NOT EXISTS quantpath CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE quantpath;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100) UNIQUE,
+  password_hash VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS simulations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  stock_symbol VARCHAR(20),
+  model_used VARCHAR(50),
+  parameters JSON,
+  results_json JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
