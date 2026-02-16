@@ -31,7 +31,7 @@ $conn->close();
           <a href="/quantpath/frontend/dashboard.php" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition">Dashboard</a>
           <a href="/quantpath/backend/logout.php" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition">Logout</a>
         <?php else: ?>
-          <a href="/quantpath/frontend/login.html" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition">Log in</a>
+          <a href="/quantpath/frontend/login.php" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition">Log in</a>
         <?php endif; ?>
       </nav>
     </div>
