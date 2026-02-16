@@ -135,7 +135,7 @@ $conn->close();
         <div class="flex items-center justify-between">
           <div>
             <div class="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">Avg Initial Price</div>
-            <div class="text-3xl font-bold text-blue-300">$<?php echo $stats['avgExpected']; ?></div>
+            <div class="text-3xl font-bold text-blue-300">₹<?php echo $stats['avgExpected']; ?></div>
           </div>
           <div class="text-4xl opacity-30">💰</div>
         </div>
@@ -190,7 +190,7 @@ $conn->close();
               <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
                 <div class="bg-white/5 rounded p-3 border border-white/10">
                   <span class="text-slate-400 text-xs">Initial Price</span>
-                  <div class="font-bold text-green-300">$<?php echo $params['S0'] ?? 'N/A'; ?></div>
+                  <div class="font-bold text-green-300">₹<?php echo $params['S0'] ?? 'N/A'; ?></div>
                 </div>
                 <div class="bg-white/5 rounded p-3 border border-white/10">
                   <span class="text-slate-400 text-xs">Drift (μ)</span>

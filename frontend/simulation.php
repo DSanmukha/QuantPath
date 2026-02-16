@@ -228,10 +228,10 @@ $conn->close();
       distChart.data.datasets[0].data = histogram;
       distChart.update();
 
-      document.getElementById('expected').textContent = '$' + mean.toFixed(2);
-      document.getElementById('median').textContent = '$' + median.toFixed(2);
-      document.getElementById('stddev').textContent = '$' + stddev.toFixed(2);
-      document.getElementById('ci').textContent = `$${ci95Low.toFixed(2)}–$${ci95High.toFixed(2)}`;
+      document.getElementById('expected').textContent = '₹' + mean.toFixed(2);
+      document.getElementById('median').textContent = '₹' + median.toFixed(2);
+      document.getElementById('stddev').textContent = '₹' + stddev.toFixed(2);
+      document.getElementById('ci').textContent = `₹${ci95Low.toFixed(2)}–₹${ci95High.toFixed(2)}`;
       document.getElementById('export-btn').style.display = 'block';
 
       lastResults = { simResults, mean, median, stddev, ci95Low, ci95High, params: {s0, mu, sigma, paths, T} };
@@ -240,7 +240,7 @@ $conn->close();
     document.getElementById('export-btn').addEventListener('click', () => {
       if (!lastResults) return;
       const { simResults, mean, median, stddev, ci95Low, ci95High, params } = lastResults;
-      const csv = `Simulation Export\nS0,${params.s0}\nμ,${params.mu}\nσ,${params.sigma}\nPaths,${params.paths}\nHorizon,${params.T}\n\nResults\nMean,${mean.toFixed(2)}\nMedian,${median.toFixed(2)}\nStd Dev,${stddev.toFixed(2)}\n95% CI Low,${ci95Low.toFixed(2)}\n95% CI High,${ci95High.toFixed(2)}\n\nFinal Prices\n${simResults.map(r => r.toFixed(2)).join('\n')}`;
+      const csv = `Simulation Export\nS0 (₹),${params.s0}\nμ,${params.mu}\nσ,${params.sigma}\nPaths,${params.paths}\nHorizon,${params.T}\n\nResults\nMean (₹),${mean.toFixed(2)}\nMedian (₹),${median.toFixed(2)}\nStd Dev (₹),${stddev.toFixed(2)}\n95% CI Low (₹),${ci95Low.toFixed(2)}\n95% CI High (₹),${ci95High.toFixed(2)}\n\nFinal Prices (₹)\n${simResults.map(r => r.toFixed(2)).join('\n')}`;
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
