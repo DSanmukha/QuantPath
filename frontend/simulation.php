@@ -1,218 +1,193 @@
 <?php
 // frontend/simulation.php
-// Demo-ready simulation page (self-contained Monte Carlo demo).
 session_start();
-$user = htmlspecialchars($_SESSION['user_name'] ?? 'Demo user', ENT_QUOTES, 'UTF-8');
+require_once __DIR__ . '/../private_config/config.php';
+
+$user_id = $_SESSION['user_id'] ?? '';
+$user_name = $_SESSION['user_name'] ?? 'Guest';
+$conn->close();
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>QuantPath — Simulation (Demo)</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    :root{--bg:#071029;--panel:#0f1726;--muted:#9fb0c8;--accent:#7c5cff;--accent2:#00d4ff;--radius:12px;--font:'Inter',system-ui;}
-    *{box-sizing:border-box} body{margin:0;font-family:var(--font);background:linear-gradient(180deg,var(--bg),#04101a);color:#e6f0fb;min-height:100vh}
-    .topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 28px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
-    .container{max-width:1100px;margin:18px auto;padding:18px;display:grid;grid-template-columns:360px 1fr;gap:18px}
-    .panel{background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0.01));border-radius:var(--radius);padding:16px;border:1px solid rgba(255,255,255,0.04)}
-    .input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;outline:none}
-    .row{display:flex;gap:8px;margin-top:12px}
-    .btn{padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;font-weight:600;cursor:pointer}
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-    .chart-wrap{height:420px;border-radius:10px;overflow:hidden;padding:8px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border:1px solid rgba(255,255,255,0.02)}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
-    .stat{padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border:1px solid rgba(255,255,255,0.02)}
-    .stat-label{font-size:12px;color:var(--muted)}
-    .stat-value{font-size:18px;font-weight:700}
-    @media (max-width:1000px){.container{grid-template-columns:1fr}.chart-wrap{height:300px}}
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <title>Simulation — QuantPath</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/quantpath/assets/css/tailwind.css">
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">Q</div>
-      <div class="brand-text">
-        <div class="app-name">QuantPath</div>
-        <div class="app-sub">Simulation</div>
-      </div>
-    </div>
-    <div class="top-actions">
-      <div class="greet">Hello, <?php echo $user; ?></div>
-      <a class="btn ghost" href="/quantpath/frontend/dashboard.php">Dashboard</a>
-      <a class="btn ghost" href="/quantpath/backend/logout.php">Logout</a>
+<body class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-slate-100">
+  <header class="bg-transparent p-4 border-b border-white/10">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <a href="/quantpath/frontend/index.html" class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-white/10 rounded flex items-center justify-center text-white font-bold">Q</div>
+        <div class="text-lg font-semibold">QuantPath</div>
+      </a>
+      <nav class="flex items-center gap-3">
+        <?php if ($user_id): ?>
+          <span class="text-sm text-white/70">Welcome, <?php echo htmlspecialchars($user_name); ?></span>
+          <a href="/quantpath/backend/logout.php" class="px-3 py-2 bg-white/10 hover:bg-white/20 rounded">Logout</a>
+        <?php else: ?>
+          <a href="/quantpath/frontend/login.html" class="px-3 py-2 bg-indigo-600 text-white rounded">Log in</a>
+        <?php endif; ?>
+        <a href="/quantpath/frontend/dashboard.php" class="px-3 py-2 bg-white/10 hover:bg-white/20 rounded">Dashboard</a>
+      </nav>
     </div>
   </header>
 
-  <main class="container">
-    <section class="panel">
-      <h3>Monte Carlo Controls</h3>
+  <main class="max-w-6xl mx-auto p-6">
+    <section class="bg-white/5 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-white/10">
+      <h2 class="text-2xl font-semibold mb-4">Monte Carlo Simulation</h2>
 
-      <label class="label">Ticker</label>
-      <input id="symbol" class="input" placeholder="AAPL" />
+      <form id="sim-form" class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Ticker</div>
+            <input id="ticker" name="ticker" placeholder="AAPL" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Initial Price (S0)</div>
+            <input id="s0" name="s0" placeholder="150.00" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Paths</div>
+            <input id="paths" name="paths" placeholder="200" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+        </div>
 
-      <label class="label">Initial price (S0)</label>
-      <input id="s0" class="input" type="number" value="100" />
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Drift μ</div>
+            <input id="mu" name="mu" placeholder="0.05" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Volatility σ</div>
+            <input id="sigma" name="sigma" placeholder="0.2" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+          <label class="block">
+            <div class="text-sm text-white/80 mb-1">Horizon (years)</div>
+            <input id="horizon" name="horizon" placeholder="1" class="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-white placeholder-white/50" />
+          </label>
+        </div>
 
-      <label class="label">Drift μ</label>
-      <input id="mu" class="input" type="number" step="0.0001" value="0.05" />
+        <div class="flex flex-wrap gap-3 mt-4">
+          <button type="button" id="fetch-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Fetch Stock</button>
+          <button type="button" id="run-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">Run Simulation</button>
+          <button type="button" id="save-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Save</button>
+        </div>
+      </form>
 
-      <label class="label">Volatility σ</label>
-      <input id="sigma" class="input" type="number" step="0.0001" value="0.2" />
+      <div class="mt-6 bg-white/6 border border-white/8 rounded p-4">
+        <h4 class="text-lg font-medium text-white/90 mb-3">Results</h4>
+        <div id="chart" class="w-full h-64 bg-white/5 rounded flex items-center justify-center text-white/60">Ready — click "Run Simulation" to see results</div>
 
-      <label class="label">Horizon (years)</label>
-      <input id="horizon" class="input" type="number" step="0.1" value="1" />
-
-      <label class="label">Paths</label>
-      <input id="paths" class="input" type="number" value="200" />
-
-      <div class="row">
-        <button id="fetch" class="btn ghost">Fetch (demo)</button>
-        <button id="run" class="btn">Run</button>
-        <button id="save" class="btn ghost">Save</button>
-      </div>
-
-      <p class="hint">This page runs a browser demo until your API is wired.</p>
-    </section>
-
-    <section class="panel">
-      <h3>Simulation Preview</h3>
-      <div class="chart-wrap" style="margin-top:12px">
-        <canvas id="simChart"></canvas>
-      </div>
-
-      <div class="stats">
-        <div class="stat"><div class="stat-label">Expected</div><div id="sim-expected" class="stat-value">—</div></div>
-        <div class="stat"><div class="stat-label">Median</div><div id="sim-median" class="stat-value">—</div></div>
-        <div class="stat"><div class="stat-label">95% CI</div><div id="sim-ci" class="stat-value">—</div></div>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 bg-white/5 rounded text-center">
+            <div class="text-sm text-white/70">Expected Price</div>
+            <div id="expected" class="text-2xl font-semibold mt-2">—</div>
+          </div>
+          <div class="p-4 bg-white/5 rounded text-center">
+            <div class="text-sm text-white/70">Median Price</div>
+            <div id="median" class="text-2xl font-semibold mt-2">—</div>
+          </div>
+          <div class="p4 bg-white/5 rounded text-center">
+            <div class="text-sm text-white/70">95% CI</div>
+            <div id="ci" class="text-2xl font-semibold mt-2">—</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
+  <script src="/quantpath/assets/js/api.js"></script>
   <script>
-  // Self-contained simulation demo script
-  (function () {
-    function randNormal() {
-      let u = 0, v = 0;
-      while (u === 0) u = Math.random();
-      while (v === 0) v = Math.random();
-      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-    }
+    let lastResults = null;
 
-    function gbmPath(S0, mu, sigma, T, steps) {
-      const dt = T / steps;
-      const p = [S0];
-      for (let i = 1; i <= steps; i++) {
-        const z = randNormal();
-        p.push(p[i - 1] * Math.exp((mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * z));
-      }
-      return p;
-    }
-
-    function monteCarlo(S0, mu, sigma, T, steps, n) {
-      const all = [];
-      for (let i = 0; i < n; i++) all.push(gbmPath(S0, mu, sigma, T, steps));
-      return all;
-    }
-
-    function createChart(ctx) {
-      return new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: { legend: { display: true } },
-          scales: { x: { display: true }, y: { display: true } }
+    document.getElementById('fetch-btn').addEventListener('click', async () => {
+      const ticker = document.getElementById('ticker').value || 'AAPL';
+      const chart = document.getElementById('chart');
+      chart.textContent = 'Loading stock data...';
+      try {
+        const data = await API.fetchStock(ticker);
+        if (data['Meta Data']) {
+          const timeSeries = data['Time Series (Daily)'];
+          chart.textContent = 'Stock data loaded: ' + Object.keys(timeSeries).length + ' trading days available';
+        } else {
+          chart.textContent = 'Error: Could not fetch stock data';
         }
-      });
-    }
+      } catch (e) {
+        chart.textContent = 'Failed to load data: ' + e.message;
+      }
+    });
 
-    function updateChart(chart, allPaths) {
-      const labels = Array.from({ length: allPaths[0].length }, (_, i) => i);
-      const sample = allPaths.slice(0, 40);
-      const datasets = sample.map((p, idx) => ({
-        label: `Path ${idx + 1}`,
-        data: p,
-        borderColor: `rgba(99,102,241,${0.12 + (idx % 6) * 0.02})`,
-        pointRadius: 0,
-        borderWidth: 1,
-        fill: false
-      }));
-      const meanPath = labels.map((_, t) => allPaths.reduce((acc, p) => acc + p[t], 0) / allPaths.length);
-      datasets.push({ label: 'Mean', data: meanPath, borderColor: '#ef4444', borderWidth: 2, pointRadius: 0 });
+    document.getElementById('run-btn').addEventListener('click', () => {
+      const s0 = parseFloat(document.getElementById('s0').value) || 150;
+      const mu = parseFloat(document.getElementById('mu').value) || 0.05;
+      const sigma = parseFloat(document.getElementById('sigma').value) || 0.2;
+      
+      // Simple demo Monte Carlo
+      const paths = parseInt(document.getElementById('paths').value) || 200;
+      const T = parseFloat(document.getElementById('horizon').value) || 1;
+      const dt = 0.01;
+      const simResults = [];
+      
+      for (let i = 0; i < paths; i++) {
+        let S = s0;
+        for (let t = 0; t < T; t += dt) {
+          const Z = Math.random() * 2 - 1;
+          S = S * Math.exp((mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * Z);
+        }
+        simResults.push(S);
+      }
+      
+      simResults.sort((a, b) => a - b);
+      const mean = simResults.reduce((a, b) => a + b, 0) / simResults.length;
+      const median = simResults[Math.floor(simResults.length / 2)];
+      const ci95Low = simResults[Math.floor(simResults.length * 0.025)];
+      const ci95High = simResults[Math.floor(simResults.length * 0.975)];
+      
+      document.getElementById('expected').textContent = '$' + mean.toFixed(2);
+      document.getElementById('median').textContent = '$' + median.toFixed(2);
+      document.getElementById('ci').textContent = '$' + ci95Low.toFixed(2) + ' — $' + ci95High.toFixed(2);
+      
+      lastResults = { paths: simResults, mean, median, ci95Low, ci95High };
+      document.getElementById('chart').textContent = 'Simulation complete: ' + paths + ' paths';
+    });
 
-      chart.data.labels = labels;
-      chart.data.datasets = datasets;
-      chart.update();
-
-      const horizon = allPaths.map(p => p[p.length - 1]);
-      const expected = horizon.reduce((a, b) => a + b, 0) / horizon.length;
-      const sorted = horizon.slice().sort((a, b) => a - b);
-      const median = sorted[Math.floor(sorted.length / 2)];
-      const lower = sorted[Math.floor(sorted.length * 0.025)] || sorted[0];
-      const upper = sorted[Math.floor(sorted.length * 0.975)] || sorted[sorted.length - 1];
-
-      document.getElementById('sim-expected').textContent = expected.toFixed(2);
-      document.getElementById('sim-median').textContent = median.toFixed(2);
-      document.getElementById('sim-ci').textContent = `${lower.toFixed(2)} — ${upper.toFixed(2)}`;
-    }
-
-    function init() {
-      const el = id => document.getElementById(id);
-      const s0El = el('s0');
-      const muEl = el('mu');
-      const sigmaEl = el('sigma');
-      const horizonEl = el('horizon');
-      const pathsEl = el('paths');
-      const fetchBtn = el('fetch');
-      const runBtn = el('run');
-      const saveBtn = el('save');
-      const canvas = el('simChart');
-
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const chart = createChart(ctx);
-
-      fetchBtn?.addEventListener('click', () => {
-        alert('Demo fetch: setting initial price to 100');
-        s0El.value = 100;
-      });
-
-      runBtn?.addEventListener('click', () => {
-        const S0 = parseFloat(s0El.value || 100);
-        const mu = parseFloat(muEl.value || 0.05);
-        const sigma = parseFloat(sigmaEl.value || 0.2);
-        const T = parseFloat(horizonEl.value || 1);
-        const steps = Math.max(1, Math.round(252 * T));
-        const n = Math.max(1, parseInt(pathsEl.value || 200, 10));
-
-        runBtn.disabled = true;
-        runBtn.textContent = 'Running...';
-
-        setTimeout(() => {
-          const all = monteCarlo(S0, mu, sigma, T, steps, n);
-          updateChart(chart, all);
-          runBtn.disabled = false;
-          runBtn.textContent = 'Run';
-        }, 50);
-      });
-
-      saveBtn?.addEventListener('click', () => {
-        alert('Save is disabled in demo mode. Use the API to persist simulations.');
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-  })();
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      <?php if (empty($user_id)): ?>
+        alert('Please log in to save simulations');
+        window.location.href = '/quantpath/frontend/login.html';
+        return;
+      <?php endif; ?>
+      
+      if (!lastResults) {
+        alert('Run a simulation first');
+        return;
+      }
+      
+      const ticker = document.getElementById('ticker').value || 'AAPL';
+      const model = 'Monte Carlo';
+      const params = {
+        S0: parseFloat(document.getElementById('s0').value) || 150,
+        mu: parseFloat(document.getElementById('mu').value) || 0.05,
+        sigma: parseFloat(document.getElementById('sigma').value) || 0.2,
+        paths: parseInt(document.getElementById('paths').value) || 200
+      };
+      
+      try {
+        const res = await API.saveSimulation({
+          stock_symbol: ticker,
+          model: model,
+          parameters: params,
+          results: lastResults
+        });
+        alert('Simulation saved!');
+        window.location.href = '/quantpath/frontend/dashboard.php';
+      } catch (e) {
+        alert('Failed to save: ' + e.message);
+      }
+    });
   </script>
 </body>
 </html>
