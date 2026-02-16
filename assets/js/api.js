@@ -9,6 +9,7 @@ const API = (function () {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(() => { throw new Error('Invalid JSON response'); });
@@ -17,7 +18,7 @@ const API = (function () {
   }
 
   async function formPost(url, formData) {
-    const res = await fetch(url, { method: 'POST', body: formData });
+    const res = await fetch(url, { method: 'POST', credentials: 'same-origin', body: formData });
     const data = await res.json().catch(() => { throw new Error('Invalid JSON response'); });
     if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
@@ -33,11 +34,11 @@ const API = (function () {
       return formPost(`${base}/register.php`, form);
     },
     login: (email, password) => postJson(`${base}/login.php`, { email, password }),
-    logout: () => fetch(`${base}/logout.php`, { method: 'GET' }),
+    logout: () => fetch(`${base}/logout.php`, { method: 'GET', credentials: 'same-origin' }),
 
     // Stock data
     fetchStock: async (symbol) => {
-      const res = await fetch(`${base}/fetch_stock.php?symbol=${encodeURIComponent(symbol)}`);
+      const res = await fetch(`${base}/fetch_stock.php?symbol=${encodeURIComponent(symbol)}`, { credentials: 'same-origin' });
       if (!res.ok) {
         const err = await res.json().catch(()=>({ error: 'API fetch failed' }));
         throw new Error(err.error || 'Failed to fetch stock');
@@ -47,6 +48,6 @@ const API = (function () {
 
     // Simulations
     saveSimulation: (payload) => postJson(`${base}/save_simulation.php`, payload),
-    getSimulations: () => fetch(`${base}/get_simulations.php`).then(r => r.json())
+    getSimulations: () => fetch(`${base}/get_simulations.php`, { credentials: 'same-origin' }).then(r => r.json())
   };
 })();
