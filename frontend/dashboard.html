@@ -47,5 +47,34 @@
       </table>
     </section>
   </main>
+  <script src="/quantpath/assets/js/api.js"></script>
+  <script>
+    (async function(){
+      const listContainer = document.querySelector('section:nth-of-type(1) .grid');
+      try {
+        const data = await API.getSimulations();
+        if (!data.ok) throw data;
+        listContainer.innerHTML = '';
+        if (!data.simulations || data.simulations.length === 0) {
+          listContainer.innerHTML = '<div class="p-4 text-sm text-slate-600">No saved simulations</div>';
+        } else {
+          for (const s of data.simulations) {
+            const el = document.createElement('div');
+            el.className = 'p-4 border rounded';
+            el.innerHTML = `<div class="font-medium">${s.stock_symbol} — ${s.model_used}</div><div class="text-xs text-slate-500">Saved: ${s.created_at}</div><div class="mt-2 text-sm text-slate-600">Params: ${s.parameters}</div>`;
+            listContainer.appendChild(el);
+          }
+        }
+      } catch (err) {
+        // If unauthorized, show login/register CTA
+        if (err && err.error && err.error.toLowerCase().includes('unauthorized')) {
+          listContainer.innerHTML = '<div class="p-4 text-sm text-slate-600">Please <a href="/quantpath/frontend/login.html" class="text-indigo-600">log in</a> to see your simulations.</div>';
+        } else {
+          listContainer.innerHTML = '<div class="p-4 text-sm text-red-600">Error loading simulations</div>';
+          console.error(err);
+        }
+      }
+    })();
+  </script>
 </body>
 </html>

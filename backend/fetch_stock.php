@@ -3,8 +3,15 @@
 $symbol = trim($_GET['symbol'] ?? '');
 if (!$symbol) { http_response_code(400); echo json_encode(['error'=>'Missing symbol']); exit; }
 
-// Replace with your free API key
-$apiKey = 'YOUR_ALPHA_VANTAGE_API_KEY';
+require_once __DIR__ . '/../private_config/config.php';
+
+$apiKey = $ALPHA_VANTAGE_API_KEY ?? '';
+if (!$apiKey || $apiKey === 'YOUR_ALPHA_VANTAGE_API_KEY') {
+	http_response_code(500);
+	echo json_encode(['error' => 'Alpha Vantage API key not configured']);
+	exit;
+}
+
 $url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" . urlencode($symbol) . "&outputsize=compact&apikey=" . $apiKey;
 
 $opts = ['http'=>['timeout'=>10]];

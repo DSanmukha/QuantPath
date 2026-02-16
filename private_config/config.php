@@ -12,4 +12,7 @@ if ($conn->connect_error) {
     exit('Database connection failed');
 }
 $conn->set_charset('utf8mb4');
+// Optional external API keys
+// You can set `ALPHA_VANTAGE_API_KEY` in your environment or edit the value below.
+$ALPHA_VANTAGE_API_KEY = getenv('ALPHA_VANTAGE_API_KEY') ?: 'YOUR_ALPHA_VANTAGE_API_KEY';
 ?>
