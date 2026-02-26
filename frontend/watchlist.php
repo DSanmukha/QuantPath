@@ -358,13 +358,7 @@ $watchlist_symbols = array_column($watchlist_items, 'stock_symbol');
 
   <script src="/quantpath/assets/js/api.js?v=2"></script>
   <script>
-    // Toast fallback
-    if (typeof Toast === 'undefined') {
-      var Toast = { container: null,
-        init() { if (!this.container) { this.container = document.createElement('div'); this.container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-3'; document.body.appendChild(this.container); } },
-        show(msg, type='info') { this.init(); const t = document.createElement('div'); const bg = type==='error'?'#ef4444':type==='success'?'#10b981':type==='warning'?'#f59e0b':'#6366f1'; t.style.cssText = `background:${bg};color:white;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 10px 40px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;transform:translateX(120%);transition:transform 0.3s;min-width:250px;`; t.innerHTML = msg; this.container.appendChild(t); requestAnimationFrame(()=>t.style.transform='translateX(0)'); setTimeout(()=>{t.style.transform='translateX(120%)';setTimeout(()=>t.remove(),300);},3000); }
-      };
-    }
+    // Toast is provided by api.js - no fallback needed
 
     // Quick add from trending / top performers
     async function quickAdd(symbol, btn) {
