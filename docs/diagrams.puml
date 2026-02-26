@@ -1,0 +1,427 @@
+' ===================================================================
+' QuantPath — PlantUML Diagrams
+' ===================================================================
+
+
+' ===================================================================
+' 1. LEVEL 0 DFD (Context Diagram)
+' ===================================================================
+@startuml Level0_DFD
+!theme plain
+title Level 0 DFD — Context Diagram
+
+actor "User" as user
+rectangle "QuantPath System" as sys
+database "Alpha Vantage API" as api
+database "MySQL Database" as db
+
+user --> sys : Registration / Login\nStock Ticker\nSimulation Parameters\nWatchlist Actions
+sys --> user : Simulation Results\nCharts & Statistics\nWatchlist Data\nCSV Exports
+
+sys --> api : Stock Data Request
+api --> sys : Historical Prices
+
+sys --> db : Save / Retrieve Data
+db --> sys : Stored Records
+
+@enduml
+
+
+' ===================================================================
+' 2. LEVEL 1 DFD
+' ===================================================================
+@startuml Level1_DFD
+!theme plain
+title Level 1 DFD — Detailed Data Flow
+
+actor "User" as user
+database "MySQL DB" as db
+database "Alpha Vantage" as api
+
+rectangle "1.0\nAuthentication" as auth
+rectangle "2.0\nStock Data\nModule" as stock
+rectangle "3.0\nSimulation\nEngine" as sim
+rectangle "4.0\nWatchlist\nManager" as watch
+rectangle "5.0\nComparison\nEngine" as compare
+rectangle "6.0\nDashboard\nAggregator" as dash
+rectangle "7.0\nProfile\nManager" as profile
+
+user --> auth : Credentials
+auth --> db : Verify / Store User
+auth --> user : Session Token
+
+user --> stock : Stock Ticker
+stock --> api : API Request
+api --> stock : Price Data
+stock --> user : Prices, μ, σ
+stock --> sim : Parameters
+
+user --> sim : Model Selection\n& Parameters
+sim --> user : Price Paths\nStatistics\nCharts
+sim --> db : Save Results
+
+user --> watch : Add/Remove Stock
+watch --> db : CRUD Operations
+watch --> user : Watchlist Display
+
+user --> compare : Select Simulations
+compare --> db : Fetch Simulations
+compare --> user : Comparison Charts
+
+user --> dash : View Dashboard
+dash --> db : Fetch All Data
+dash --> user : Stats & History
+
+user --> profile : Edit Profile
+profile --> db : Update User Data
+profile --> user : Profile Display
+
+@enduml
+
+
+' ===================================================================
+' 3. CLASS DIAGRAM
+' ===================================================================
+@startuml Class_Diagram
+!theme plain
+title Class Diagram — QuantPath
+
+class User {
+  +id: int
+  +name: varchar(100)
+  +email: varchar(100)
+  +password_hash: varchar(255)
+  +bio: text
+  +avatar_url: varchar(255)
+  +phone: varchar(20)
+  +institution: varchar(200)
+  +created_at: timestamp
+  --
+  +register(): void
+  +login(): Session
+  +logout(): void
+  +updateProfile(): void
+  +deleteAccount(): void
+}
+
+class Simulation {
+  +id: int
+  +user_id: int
+  +stock_symbol: varchar(20)
+  +model_used: varchar(50)
+  +parameters: JSON
+  +results_json: JSON
+  +created_at: timestamp
+  --
+  +runGBM(): Results
+  +runMeanReversion(): Results
+  +runJumpDiffusion(): Results
+  +runGARCH(): Results
+  +save(): void
+  +delete(): void
+  +exportCSV(): File
+}
+
+class Watchlist {
+  +id: int
+  +user_id: int
+  +stock_symbol: varchar(20)
+  +added_at: timestamp
+  --
+  +addStock(): void
+  +removeStock(): void
+  +fetchPrice(): PriceData
+  +getAll(): List
+}
+
+class Comparison {
+  +id: int
+  +user_id: int
+  +title: varchar(200)
+  +simulation_ids: JSON
+  +created_at: timestamp
+  --
+  +create(): void
+  +getSimulations(): List
+}
+
+class StockDataService {
+  +fetchStock(ticker): TimeSeriesData
+  +computeDrift(prices): float
+  +computeVolatility(prices): float
+  +getLastPrice(prices): float
+}
+
+class SimulationEngine {
+  +randNormal(): float
+  +simulateGBM(s0, mu, sigma, T, paths): Results
+  +simulateOU(s0, theta, kappa, sigma, T, paths): Results
+  +simulateMerton(s0, mu, sigma, lambda, jumpMu, jumpSigma, T, paths): Results
+  +simulateGARCH(s0, mu, sigma, omega, alpha, beta, T, paths): Results
+}
+
+User "1" --> "0..*" Simulation : creates
+User "1" --> "0..*" Watchlist : manages
+User "1" --> "0..*" Comparison : creates
+Simulation ..> SimulationEngine : uses
+Simulation ..> StockDataService : fetches data from
+
+@enduml
+
+
+' ===================================================================
+' 4. ER DIAGRAM
+' ===================================================================
+@startuml ER_Diagram
+!theme plain
+title Entity-Relationship Diagram
+
+entity "users" as users {
+  * id : INT <<PK>>
+  --
+  name : VARCHAR(100)
+  email : VARCHAR(100) <<UNIQUE>>
+  password_hash : VARCHAR(255)
+  bio : TEXT
+  avatar_url : VARCHAR(255)
+  phone : VARCHAR(20)
+  institution : VARCHAR(200)
+  created_at : TIMESTAMP
+}
+
+entity "simulations" as sims {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  stock_symbol : VARCHAR(20)
+  model_used : VARCHAR(50)
+  parameters : JSON
+  results_json : JSON
+  created_at : TIMESTAMP
+}
+
+entity "watchlist" as watch {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  stock_symbol : VARCHAR(20)
+  added_at : TIMESTAMP
+}
+
+entity "comparisons" as comp {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  title : VARCHAR(200)
+  simulation_ids : JSON
+  created_at : TIMESTAMP
+}
+
+users ||--o{ sims : "creates"
+users ||--o{ watch : "manages"
+users ||--o{ comp : "creates"
+
+@enduml
+
+
+' ===================================================================
+' 5. USE CASE DIAGRAM
+' ===================================================================
+@startuml UseCase_Diagram
+!theme plain
+title Use Case Diagram — QuantPath
+
+left to right direction
+
+actor "Guest User" as guest
+actor "Registered User" as user
+actor "Alpha Vantage API" as api
+
+rectangle "QuantPath System" {
+  usecase "Register" as UC1
+  usecase "Login" as UC2
+  usecase "View Landing Page" as UC3
+  usecase "Run Simulation" as UC4
+  usecase "Select Model (GBM/OU/Merton/GARCH)" as UC5
+  usecase "Fetch Stock Data" as UC6
+  usecase "Save Simulation" as UC7
+  usecase "View Dashboard" as UC8
+  usecase "Export CSV" as UC9
+  usecase "Delete Simulation" as UC10
+  usecase "Manage Watchlist" as UC11
+  usecase "View Trending Stocks" as UC12
+  usecase "Compare Simulations" as UC13
+  usecase "Manage Profile" as UC14
+  usecase "Logout" as UC15
+}
+
+guest --> UC1
+guest --> UC2
+guest --> UC3
+guest --> UC4
+
+user --> UC4
+user --> UC5
+user --> UC6
+user --> UC7
+user --> UC8
+user --> UC9
+user --> UC10
+user --> UC11
+user --> UC12
+user --> UC13
+user --> UC14
+user --> UC15
+
+UC4 ..> UC5 : <<include>>
+UC6 --> api
+UC4 ..> UC6 : <<extend>>
+
+@enduml
+
+
+' ===================================================================
+' 6. ACTIVITY DIAGRAM
+' ===================================================================
+@startuml Activity_Diagram
+!theme plain
+title Activity Diagram — Simulation Workflow
+
+start
+
+:User opens Simulation page;
+
+:Select simulation model;
+note right
+  GBM / Mean Reversion
+  Jump Diffusion / GARCH
+end note
+
+:Enter stock ticker;
+
+if (Fetch stock data?) then (yes)
+  :Call Alpha Vantage API;
+  if (Data available?) then (yes)
+    :Compute μ, σ from historical returns;
+    :Auto-fill parameters;
+  else (no)
+    :Show error message;
+    :User enters parameters manually;
+  endif
+else (no)
+  :Enter parameters manually;
+endif
+
+:Configure additional model parameters;
+:Set paths count and horizon;
+
+:Click "Run Simulation";
+
+:Generate random normal numbers (Box-Muller);
+:Execute selected simulation model;
+:Compute terminal prices;
+
+:Calculate statistics;
+note right
+  Mean, Median, StdDev
+  95% CI, VaR(5%)
+end note
+
+:Render price path chart;
+:Render distribution histogram;
+:Display stat cards;
+
+if (User logged in?) then (yes)
+  if (Save results?) then (yes)
+    :Save to database;
+    :Redirect to dashboard;
+  else (no)
+    :Stay on simulation page;
+  endif
+else (no)
+  :Show login prompt;
+endif
+
+if (Export CSV?) then (yes)
+  :Generate CSV file;
+  :Download to user device;
+else (no)
+endif
+
+stop
+
+@enduml
+
+
+' ===================================================================
+' 7. SEQUENCE DIAGRAM
+' ===================================================================
+@startuml Sequence_Diagram
+!theme plain
+title Sequence Diagram — Run Simulation Flow
+
+actor User
+participant "Browser\n(Frontend)" as FE
+participant "PHP Backend" as BE
+participant "Alpha Vantage\nAPI" as API
+database "MySQL\nDatabase" as DB
+
+User -> FE : Select model & enter ticker
+User -> FE : Click "Fetch Stock Data"
+FE -> BE : GET /backend/fetch_stock.php?symbol=RELIANCE.BSE
+BE -> API : HTTP GET (Time Series Daily)
+API --> BE : JSON (historical prices)
+BE --> FE : JSON response
+FE -> FE : Compute μ, σ from returns
+FE -> FE : Auto-fill form parameters
+
+User -> FE : Click "Run Simulation"
+FE -> FE : Execute simulation algorithm\n(GBM/OU/Merton/GARCH)
+FE -> FE : Compute statistics\n(mean, median, VaR, CI)
+FE -> FE : Render Chart.js charts
+FE --> User : Display results
+
+User -> FE : Click "Save Results"
+FE -> BE : POST /backend/save_simulation.php\n{stock_symbol, model, params, results}
+BE -> DB : INSERT INTO simulations
+DB --> BE : Success (insert_id)
+BE --> FE : JSON {ok: true, id: N}
+FE --> User : "Saved!" toast + redirect
+
+@enduml
+
+
+' ===================================================================
+' 8. GANTT CHART (Dec 8, 12 weeks, week 1 empty)
+' ===================================================================
+@startgantt Gantt_Chart
+title Project Gantt Chart — QuantPath Development
+printscale weekly
+project starts 2024-12-08
+
+-- Phase 0: Buffer --
+[Project Kickoff / Planning] starts 2024-12-08 and ends 2024-12-14
+[Project Kickoff / Planning] is colored in LightGray
+
+-- Phase 1: Requirements & Design --
+[Requirements Analysis] starts 2024-12-15 and ends 2024-12-21
+[System Design & Architecture] starts 2024-12-22 and ends 2024-12-28
+
+-- Phase 2: Database & Backend --
+[Database Schema Design] starts 2024-12-29 and ends 2025-01-04
+[Authentication Module] starts 2025-01-05 and ends 2025-01-11
+[Backend APIs] starts 2025-01-05 and ends 2025-01-18
+
+-- Phase 3: Frontend Development --
+[Landing Page & UI] starts 2025-01-12 and ends 2025-01-18
+[Simulation Page - GBM] starts 2025-01-19 and ends 2025-01-25
+[Additional Models - OU / Merton / GARCH] starts 2025-01-26 and ends 2025-02-01
+[Watchlist & Trending Stocks] starts 2025-02-02 and ends 2025-02-08
+[Dashboard & Comparison] starts 2025-02-09 and ends 2025-02-15
+
+-- Phase 4: Testing & Documentation --
+[Integration Testing] starts 2025-02-16 and ends 2025-02-22
+[UI Polish & Bug Fixes] starts 2025-02-16 and ends 2025-02-22
+[Documentation & Diagrams] starts 2025-02-23 and ends 2025-02-27
+
+@endgantt

@@ -3,46 +3,49 @@
 session_start();
 require_once __DIR__ . '/../private_config/config.php';
 
-// Fetch simulations for logged-in user
 $simulations = [];
 $user_name = '';
 $user_id = '';
 $stats = ['total' => 0, 'avgExpected' => 0, 'totalDrift' => 0];
 $tracked_stocks = [];
 $stock_count = 0;
+$watchlist_items = [];
+$recent_activity = [];
 
 if (!empty($_SESSION['user_id'])) {
     $user_id = $_SESSION['user_id'];
     $user_name = $_SESSION['user_name'] ?? 'User';
-    
+
+    // Fetch simulations
     $stmt = $conn->prepare("SELECT id, stock_symbol, model_used, parameters, results_json, created_at FROM simulations WHERE user_id=? ORDER BY created_at DESC");
     $stmt->bind_param('i', $user_id);
     $stmt->execute();
-    $res = $stmt->get_result();
-    $simulations = $res->fetch_all(MYSQLI_ASSOC);
+    $simulations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    
+
     $stats['total'] = count($simulations);
     $stock_symbols = [];
-    
+
     if ($stats['total'] > 0) {
-        $avgExp = 0;
-        $avgDrift = 0;
-        
+        $avgExp = 0; $avgDrift = 0;
         foreach ($simulations as $s) {
             $params = json_decode($s['parameters'], true);
             $avgExp += $params['S0'] ?? 0;
             $avgDrift += $params['mu'] ?? 0;
             $stock_symbols[] = $s['stock_symbol'];
         }
-        
         $stats['avgExpected'] = round($avgExp / $stats['total'], 2);
         $stats['totalDrift'] = round($avgDrift / $stats['total'], 4);
-        
-        // Get unique stocks tracked
         $tracked_stocks = array_unique($stock_symbols);
         $stock_count = count($tracked_stocks);
     }
+
+    // Fetch watchlist
+    $stmt2 = $conn->prepare("SELECT id, stock_symbol, added_at FROM watchlist WHERE user_id=? ORDER BY added_at DESC LIMIT 10");
+    $stmt2->bind_param('i', $user_id);
+    $stmt2->execute();
+    $watchlist_items = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt2->close();
 }
 
 $conn->close();
@@ -53,250 +56,373 @@ $conn->close();
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard — QuantPath</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpaca-js@latest/dist/alpaca.web.min.js"></script>
-  <link rel="stylesheet" href="/quantpath/assets/css/tailwind.css">
   <style>
-    @keyframes slideInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .animate-slide-in {
-      animation: slideInUp 0.6s ease-out;
-    }
-    
-    .stock-ticker {
-      animation: slideInUp 0.3s ease-out;
-    }
-    
-    @keyframes pulse-soft {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
-    }
-    
-    .pulse-soft {
-      animation: pulse-soft 3s ease-in-out infinite;
-    }
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0a0e1a; }
+    .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06); }
+    .glass:hover { border-color: rgba(255,255,255,0.1); }
+    .sidebar { background: rgba(10,14,30,0.95); border-right: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; transition: all 0.2s; color: #94a3b8; font-size: 14px; }
+    .sidebar-link:hover { background: rgba(99,102,241,0.1); color: #c7d2fe; }
+    .sidebar-link.active { background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15)); color: #a5b4fc; font-weight: 600; }
+    .stat-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .stat-card:hover { transform: translateY(-4px); }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    .fade-in-d1 { animation-delay: 0.1s; opacity: 0; }
+    .fade-in-d2 { animation-delay: 0.2s; opacity: 0; }
+    .fade-in-d3 { animation-delay: 0.3s; opacity: 0; }
+    .fade-in-d4 { animation-delay: 0.4s; opacity: 0; }
+    .sim-card { transition: all 0.3s; border: 1px solid rgba(255,255,255,0.04); }
+    .sim-card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-2px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-slate-100">
-  <!-- Header -->
-  <header class="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-white/5">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="/quantpath/frontend/index.html" class="flex items-center gap-3 group">
-        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:shadow-lg group-hover:shadow-indigo-500/50 transition">Q</div>
-        <div class="text-xl font-bold">QuantPath</div>
+<body class="min-h-screen text-slate-100 flex">
+  <!-- Sidebar -->
+  <aside class="sidebar w-[260px] min-h-screen fixed left-0 top-0 p-5 flex flex-col z-40">
+    <a href="/quantpath/frontend/index.html" class="flex items-center gap-3 mb-8 group">
+      <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition">Q</div>
+      <div>
+        <div class="text-lg font-bold text-white">QuantPath</div>
+        <div class="text-xs text-slate-500">Stock Analytics</div>
+      </div>
+    </a>
+
+    <div class="text-xs text-slate-600 uppercase tracking-wider font-semibold mb-3 px-2">Main Menu</div>
+    <nav class="space-y-1 mb-8">
+      <a href="/quantpath/frontend/dashboard.php" class="sidebar-link active">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
       </a>
-      <nav class="flex items-center gap-4">
+      <a href="/quantpath/frontend/simulation.php" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        New Simulation
+      </a>
+      <a href="/quantpath/frontend/watchlist.php" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Watchlist
+      </a>
+      <a href="/quantpath/frontend/compare.php" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        Compare
+      </a>
+    </nav>
+
+    <div class="text-xs text-slate-600 uppercase tracking-wider font-semibold mb-3 px-2">Account</div>
+    <nav class="space-y-1">
+      <a href="/quantpath/frontend/profile.php" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+      <a href="/quantpath/backend/logout.php" class="sidebar-link text-red-400 hover:bg-red-500/10 hover:text-red-300">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Logout
+      </a>
+    </nav>
+
+    <div class="mt-auto pt-6">
+      <div class="glass rounded-xl p-4">
+        <div class="text-sm font-semibold text-white mb-1 flex items-center gap-1.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 4 12.7V17H8v-2.3A7 7 0 0 1 12 2z"/></svg> Quick Tip</div>
+        <p class="text-xs text-slate-400 leading-relaxed">Use Indian BSE stock tickers like RELIANCE.BSE, TCS.BSE for accurate Indian market data.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="ml-[260px] flex-1 min-h-screen">
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-30 glass border-b border-white/5 px-8 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-white">Dashboard</h1>
+        <p class="text-xs text-slate-500">Welcome back! Here's your simulation overview.</p>
+      </div>
+      <div class="flex items-center gap-4">
         <?php if ($user_id): ?>
-          <div class="text-sm text-slate-300">Hello, <span class="font-semibold text-indigo-300"><?php echo htmlspecialchars($user_name); ?></span></div>
-          <a href="/quantpath/frontend/simulation.php" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition">New Simulation</a>
-          <a href="/quantpath/backend/logout.php" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition">Logout</a>
-        <?php else: ?>
-          <a href="/quantpath/frontend/login.php" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition">Log in</a>
-        <?php endif; ?>
-      </nav>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-6 py-8">
-    <!-- Statistics Cards -->
-    <?php if ($user_id): ?>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-slide-in">
-      <div class="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-500/30 rounded-xl p-6 hover:from-indigo-500/20 hover:to-purple-500/20 transition">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">Total Simulations</div>
-            <div class="text-4xl font-bold text-indigo-300"><?php echo $stats['total']; ?></div>
+          <div class="flex items-center gap-3">
+            <a href="/quantpath/frontend/profile.php" class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-full flex items-center justify-center text-white text-sm font-bold transition shadow-lg shadow-indigo-500/30">
+              <?php echo strtoupper(substr($user_name, 0, 1)); ?>
+            </a>
           </div>
-          <div class="text-4xl opacity-30">📊</div>
-        </div>
-      </div>
-      
-      <div class="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 hover:from-green-500/20 hover:to-emerald-500/20 transition">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">Tracked Stocks</div>
-            <div class="text-4xl font-bold text-green-300"><?php echo $stock_count; ?></div>
-          </div>
-          <div class="text-4xl opacity-30">📈</div>
-        </div>
-      </div>
-      
-      <div class="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6 hover:from-blue-500/20 hover:to-cyan-500/20 transition">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">Avg Initial Price</div>
-            <div class="text-3xl font-bold text-blue-300">₹<?php echo $stats['avgExpected']; ?></div>
-          </div>
-          <div class="text-4xl opacity-30">💰</div>
-        </div>
-      </div>
-      
-      <div class="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 hover:from-purple-500/20 hover:to-pink-500/20 transition">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">Avg Drift (μ)</div>
-            <div class="text-3xl font-bold text-purple-300"><?php echo $stats['totalDrift']; ?></div>
-          </div>
-          <div class="text-4xl opacity-30">⚡</div>
-        </div>
-      </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Main Content -->
-    <section class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8 shadow-xl">
-      <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Your Simulations</h2>
-        <?php if ($user_id && !empty($simulations)): ?>
-        <button onclick="exportAllSimulations()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg text-sm font-medium transition shadow-lg shadow-green-500/25">↓ Export All CSV</button>
         <?php endif; ?>
       </div>
+    </header>
 
+    <main class="px-8 py-6">
       <?php if (!$user_id): ?>
-        <div class="p-6 bg-blue-500/10 border border-blue-500/30 rounded-lg text-center">
-          <p class="text-slate-300">Please <a href="/quantpath/frontend/login.php" class="text-blue-400 hover:underline font-semibold">log in</a> to view and manage your simulations.</p>
-        </div>
-      <?php elseif (empty($simulations)): ?>
-        <div class="p-8 bg-slate-500/10 border border-slate-500/30 rounded-lg text-center">
-          <p class="text-slate-300 mb-4">No simulations yet. Start by creating your first simulation!</p>
-          <a href="/quantpath/frontend/simulation.php" class="inline-block px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition">Create First Simulation</a>
+        <div class="flex items-center justify-center min-h-[60vh]">
+          <div class="glass rounded-2xl p-12 text-center max-w-md">
+            <div class="mb-4 text-slate-400"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="mx-auto" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <h2 class="text-2xl font-bold text-white mb-2">Login Required</h2>
+            <p class="text-slate-400 mb-6">Sign in to view your dashboard, simulations, and analytics.</p>
+            <a href="/quantpath/frontend/login.php" class="inline-block px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold">Sign In</a>
+          </div>
         </div>
       <?php else: ?>
-        <div class="grid gap-6 grid-cols-1 lg:grid-cols-2">
-          <?php foreach (array_slice($simulations, 0, 6) as $idx => $sim): ?>
-            <div class="stock-ticker bg-gradient-to-br from-slate-800/70 to-slate-900/50 border border-white/5 rounded-lg p-6 hover:border-white/20 hover:from-slate-800 hover:to-slate-800/70 transition-all duration-300 group" style="animation-delay: <?php echo $idx * 0.1; ?>s">
-              <div class="flex justify-between items-start mb-4">
-                <div>
-                  <h3 class="font-bold text-2xl text-white group-hover:text-indigo-300 transition"><?php echo htmlspecialchars($sim['stock_symbol']); ?></h3>
-                  <p class="text-xs text-slate-500 mt-1"><?php echo htmlspecialchars($sim['model_used']); ?> • <?php echo date('M d, Y H:i', strtotime($sim['created_at'])); ?></p>
-                </div>
-                <div class="flex gap-2">
-                  <button onclick="downloadSim(<?php echo htmlspecialchars(json_encode($sim)); ?>)" class="px-3 py-1.5 bg-indigo-600/70 hover:bg-indigo-600 text-xs text-white rounded transition shadow-lg shadow-indigo-500/20" title="Download CSV">📥</button>
-                  <button onclick="viewDetails(this)" class="px-3 py-1.5 bg-slate-700/70 hover:bg-slate-700 text-xs text-white rounded transition">📋</button>
-                </div>
-              </div>
-              
-              <?php $params = json_decode($sim['parameters'], true); ?>
-              <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
-                <div class="bg-white/5 rounded p-3 border border-white/10">
-                  <span class="text-slate-400 text-xs">Initial Price</span>
-                  <div class="font-bold text-green-300">₹<?php echo $params['S0'] ?? 'N/A'; ?></div>
-                </div>
-                <div class="bg-white/5 rounded p-3 border border-white/10">
-                  <span class="text-slate-400 text-xs">Drift (μ)</span>
-                  <div class="font-bold text-blue-300"><?php echo $params['mu'] ?? 'N/A'; ?></div>
-                </div>
-                <div class="bg-white/5 rounded p-3 border border-white/10">
-                  <span class="text-slate-400 text-xs">Volatility (σ)</span>
-                  <div class="font-bold text-purple-300"><?php echo $params['sigma'] ?? 'N/A'; ?></div>
-                </div>
-                <div class="bg-white/5 rounded p-3 border border-white/10">
-                  <span class="text-slate-400 text-xs">Paths</span>
-                  <div class="font-bold text-orange-300"><?php echo $params['paths'] ?? 'N/A'; ?></div>
-                </div>
-              </div>
-              
-              <details class="text-xs text-slate-400 cursor-pointer group/details">
-                <summary class="font-semibold hover:text-white transition py-2">Advanced Parameters →</summary>
-                <div class="mt-2 text-xs bg-black/40 p-3 rounded border border-white/5 max-h-48 overflow-auto">
-                  <pre class="text-slate-300"><?php echo json_encode(json_decode($sim['parameters'], true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES); ?></pre>
-                </div>
-              </details>
+
+      <!-- Stats Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card glass rounded-xl p-5 fade-in fade-in-d1">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </div>
-          <?php endforeach; ?>
+            <span class="badge bg-indigo-500/15 text-indigo-300">Total</span>
+          </div>
+          <div class="text-3xl font-bold text-white"><?php echo $stats['total']; ?></div>
+          <div class="text-xs text-slate-500 mt-1">Simulations Run</div>
         </div>
-        <?php if (count($simulations) > 6): ?>
-        <div class="text-center mt-8 text-slate-400 text-sm py-4 border-t border-white/5">
-          Showing 6 of <span class="font-bold text-white"><?php echo count($simulations); ?></span> simulations
+
+        <div class="stat-card glass rounded-xl p-5 fade-in fade-in-d2">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-green-500/15 rounded-lg flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            </div>
+            <span class="badge bg-green-500/15 text-green-300">Tracking</span>
+          </div>
+          <div class="text-3xl font-bold text-white"><?php echo $stock_count; ?></div>
+          <div class="text-xs text-slate-500 mt-1">Unique Stocks</div>
         </div>
-        <?php endif; ?>
+
+        <div class="stat-card glass rounded-xl p-5 fade-in fade-in-d3">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-blue-500/15 rounded-lg flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <span class="badge bg-blue-500/15 text-blue-300">Avg</span>
+          </div>
+          <div class="text-3xl font-bold text-white">₹<?php echo number_format($stats['avgExpected'], 0); ?></div>
+          <div class="text-xs text-slate-500 mt-1">Avg Initial Price</div>
+        </div>
+
+        <div class="stat-card glass rounded-xl p-5 fade-in fade-in-d4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <span class="badge bg-purple-500/15 text-purple-300">Drift</span>
+          </div>
+          <div class="text-3xl font-bold text-white"><?php echo $stats['totalDrift']; ?></div>
+          <div class="text-xs text-slate-500 mt-1">Avg Drift (μ)</div>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Simulations (2 cols) -->
+        <div class="lg:col-span-2">
+          <div class="glass rounded-2xl p-6 fade-in">
+            <div class="flex justify-between items-center mb-5">
+              <div>
+                <h2 class="text-lg font-bold text-white">Recent Simulations</h2>
+                <p class="text-xs text-slate-500"><?php echo count($simulations); ?> total simulations</p>
+              </div>
+              <?php if (!empty($simulations)): ?>
+              <button onclick="exportAllSimulations()" class="px-3 py-1.5 bg-green-500/15 text-green-300 hover:bg-green-500/25 rounded-lg text-xs font-medium transition flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export All</button>
+              <?php endif; ?>
+            </div>
+
+            <?php if (empty($simulations)): ?>
+              <div class="flex flex-col items-center justify-center py-12">
+                <div class="mb-3 text-slate-500"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="mx-auto" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                <p class="text-slate-400 mb-4">No simulations yet</p>
+                <a href="/quantpath/frontend/simulation.php" class="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-semibold">Create First Simulation</a>
+              </div>
+            <?php else: ?>
+              <div class="space-y-3 max-h-[500px] overflow-y-auto scrollbar-hide">
+                <?php foreach ($simulations as $idx => $sim): ?>
+                  <?php $params = json_decode($sim['parameters'], true); $results = json_decode($sim['results_json'], true); ?>
+                  <div class="sim-card bg-slate-900/50 rounded-xl p-4 group">
+                    <div class="flex justify-between items-start">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center text-indigo-300 font-bold text-sm">
+                          <?php echo strtoupper(substr($sim['stock_symbol'], 0, 2)); ?>
+                        </div>
+                        <div>
+                          <h3 class="font-semibold text-white group-hover:text-indigo-300 transition"><?php echo htmlspecialchars($sim['stock_symbol']); ?></h3>
+                          <p class="text-xs text-slate-500"><?php echo htmlspecialchars($sim['model_used']); ?> • <?php echo date('M d, Y H:i', strtotime($sim['created_at'])); ?></p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button onclick="downloadSim(<?php echo htmlspecialchars(json_encode($sim)); ?>)" class="px-2 py-1 bg-indigo-500/15 text-indigo-300 rounded text-xs hover:bg-indigo-500/25 transition flex items-center justify-center" title="Download CSV"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+                        <button onclick="deleteSim(<?php echo $sim['id']; ?>, this)" class="px-2 py-1 bg-red-500/10 text-red-400 rounded text-xs hover:bg-red-500/20 transition flex items-center justify-center" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-3 mt-3">
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">S₀</div>
+                        <div class="text-sm font-semibold text-green-300">₹<?php echo number_format($params['S0'] ?? 0, 0); ?></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">μ</div>
+                        <div class="text-sm font-semibold text-blue-300"><?php echo $params['mu'] ?? '—'; ?></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">σ</div>
+                        <div class="text-sm font-semibold text-purple-300"><?php echo $params['sigma'] ?? '—'; ?></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">Paths</div>
+                        <div class="text-sm font-semibold text-orange-300"><?php echo $params['paths'] ?? '—'; ?></div>
+                      </div>
+                    </div>
+                    <?php if ($results): ?>
+                    <div class="mt-3 pt-3 border-t border-white/5 grid grid-cols-3 gap-3">
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">Expected</div>
+                        <div class="text-sm font-semibold text-indigo-300">₹<?php echo number_format($results['mean'] ?? 0, 2); ?></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">Median</div>
+                        <div class="text-sm font-semibold text-green-300">₹<?php echo number_format($results['median'] ?? 0, 2); ?></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-xs text-slate-500">Std Dev</div>
+                        <div class="text-sm font-semibold text-orange-300">₹<?php echo number_format($results['stddev'] ?? 0, 2); ?></div>
+                      </div>
+                    </div>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="space-y-6">
+          <!-- Watchlist Widget -->
+          <div class="glass rounded-2xl p-6 fade-in fade-in-d2">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-bold text-white">Watchlist</h3>
+              <a href="/quantpath/frontend/watchlist.php" class="text-xs text-indigo-400 hover:text-indigo-300 transition">View All →</a>
+            </div>
+            <?php if (empty($watchlist_items)): ?>
+              <div class="text-center py-6">
+                <div class="mb-2 text-slate-500"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="mx-auto" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                <p class="text-sm text-slate-500 mb-3">No stocks in watchlist</p>
+                <a href="/quantpath/frontend/watchlist.php" class="text-xs text-indigo-400 hover:text-indigo-300">Add stocks →</a>
+              </div>
+            <?php else: ?>
+              <div class="space-y-2">
+                <?php foreach ($watchlist_items as $wl): ?>
+                <div class="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl hover:bg-slate-900/70 transition">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-yellow-500/15 rounded-lg flex items-center justify-center text-yellow-300 text-xs font-bold">
+                      <?php echo strtoupper(substr($wl['stock_symbol'], 0, 2)); ?>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-white"><?php echo htmlspecialchars($wl['stock_symbol']); ?></div>
+                      <div class="text-xs text-slate-500"><?php echo date('M d', strtotime($wl['added_at'])); ?></div>
+                    </div>
+                  </div>
+                  <a href="/quantpath/frontend/simulation.php?ticker=<?php echo urlencode($wl['stock_symbol']); ?>" class="text-xs text-indigo-400 hover:text-indigo-300">Simulate →</a>
+                </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <!-- Simulation Distribution Chart -->
+          <div class="glass rounded-2xl p-6 fade-in fade-in-d3">
+            <h3 class="text-lg font-bold text-white mb-1">Stock Distribution</h3>
+            <p class="text-xs text-slate-500 mb-4">Simulations by stock</p>
+            <div style="height: 200px;">
+              <canvas id="stockPieChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="glass rounded-2xl p-6 fade-in fade-in-d4">
+            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">Quick Actions</h3>
+            <div class="space-y-2">
+              <a href="/quantpath/frontend/simulation.php" class="flex items-center gap-3 p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition text-sm text-indigo-300">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Run New Simulation
+              </a>
+              <a href="/quantpath/frontend/compare.php" class="flex items-center gap-3 p-3 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl transition text-sm text-purple-300">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg> Compare Simulations
+              </a>
+              <a href="/quantpath/frontend/watchlist.php" class="flex items-center gap-3 p-3 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-xl transition text-sm text-yellow-300">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Manage Watchlist
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <?php endif; ?>
-    </section>
-  </main>
+    </main>
+  </div>
 
-  <script src="/quantpath/assets/js/api.js"></script>
+  <script src="/quantpath/assets/js/api.js?v=2"></script>
   <script>
-    // Enhanced stock ticker fetching for live market data
-    async function fetchLiveMarketData(symbol) {
-      try {
-        const res = await fetch(`/quantpath/backend/fetch_stock.php?symbol=${symbol}`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data;
-      } catch (err) {
-        console.error(`Error fetching ${symbol}:`, err);
-        return null;
-      }
-    }
+    // Stock distribution pie chart
+    <?php if (!empty($tracked_stocks)): ?>
+    (function() {
+      const stockCounts = {};
+      const sims = <?php echo json_encode($simulations); ?>;
+      sims.forEach(s => { stockCounts[s.stock_symbol] = (stockCounts[s.stock_symbol] || 0) + 1; });
+      const labels = Object.keys(stockCounts);
+      const data = Object.values(stockCounts);
+      const colors = labels.map((_, i) => `hsl(${220 + i * 40}, 70%, 60%)`);
 
-    // View simulation details modal
-    function viewDetails(btn) {
-      const card = btn.closest('div.stock-ticker');
-      const details = card.querySelector('details');
-      if (details) {
-        details.open = !details.open;
-      }
-    }
+      new Chart(document.getElementById('stockPieChart'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 } }
+          },
+          cutout: '65%'
+        }
+      });
+    })();
+    <?php endif; ?>
 
     function downloadSim(sim) {
-      const params = JSON.parse(sim.parameters);
-      const csv = `Stock Symbol,Model Used,Date Created,Initial Price (S0),Drift (μ),Volatility (σ),Simulation Paths,Time Steps\n"${sim.stock_symbol}","${sim.model_used}","${sim.created_at}",${params.S0},${params.mu},${params.sigma},${params.paths},${params.steps}`;
-      
+      const params = typeof sim.parameters === 'string' ? JSON.parse(sim.parameters) : sim.parameters;
+      const csv = `Stock Symbol,Model,Date,Initial Price (₹),Drift (μ),Volatility (σ),Paths,Time Steps\n"${sim.stock_symbol}","${sim.model_used}","${sim.created_at}",${params.S0},${params.mu},${params.sigma},${params.paths},${params.steps}`;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${sim.stock_symbol}_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
+      link.href = URL.createObjectURL(blob);
+      link.download = `${sim.stock_symbol}_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
-      document.body.removeChild(link);
+      Toast.show('CSV downloaded', 'success');
+    }
+
+    async function deleteSim(id, btn) {
+      if (!confirm('Delete this simulation?')) return;
+      const card = btn.closest('.sim-card');
+      try {
+        await API.deleteSimulation(id);
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(-20px)';
+        setTimeout(() => { card.remove(); Toast.show('Simulation deleted', 'success'); }, 300);
+      } catch (e) {
+        Toast.show('Error: ' + e.message, 'error');
+      }
     }
 
     function exportAllSimulations() {
       const sims = <?php echo json_encode($simulations); ?>;
-      let csv = 'Stock Symbol,Model Used,Date Created,Initial Price (S0),Drift (μ),Volatility (σ),Simulation Paths,Time Steps\n';
-      
+      let csv = 'Stock,Model,Date,S₀ (₹),μ,σ,Paths,Steps\n';
       sims.forEach(s => {
-        const params = JSON.parse(s.parameters);
-        csv += `"${s.stock_symbol}","${s.model_used}","${s.created_at}",${params.S0},${params.mu},${params.sigma},${params.paths},${params.steps}\n`;
+        const p = typeof s.parameters === 'string' ? JSON.parse(s.parameters) : s.parameters;
+        csv += `"${s.stock_symbol}","${s.model_used}","${s.created_at}",${p.S0},${p.mu},${p.sigma},${p.paths},${p.steps}\n`;
       });
-      
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `quantpath_all_simulations_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
+      link.href = URL.createObjectURL(blob);
+      link.download = `quantpath_all_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
-      document.body.removeChild(link);
+      Toast.show('All simulations exported', 'success');
     }
-
-    // Load stock tickers on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      const stockSymbols = <?php echo json_encode($tracked_stocks); ?>;
-      
-      // Animate cards on load
-      const cards = document.querySelectorAll('.stock-ticker');
-      cards.forEach((card, idx) => {
-        card.style.animationDelay = `${idx * 0.1}s`;
-      });
-    });
   </script>
 </body>
 </html>

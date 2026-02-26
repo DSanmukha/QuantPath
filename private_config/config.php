@@ -13,9 +13,11 @@ if ($conn->connect_error) {
 }
 $conn->set_charset('utf8mb4');
 // Optional external API keys
-// You can set `ALPHA_VANTAGE_API_KEY` in your environment or edit the value below.
-$ALPHA_VANTAGE_API_KEY = getenv('ALPHA_VANTAGE_API_KEY') ?: '';
-// NOTE: The key should be set in the environment (or Apache SetEnv). Do NOT
-// commit your API key into source control. If this repository already contains
-// the key in history, consider rotating the key.
+$ALPHA_VANTAGE_API_KEY = getenv('ALPHA_VANTAGE_API_KEY') ?: 'Z0E3ECTC5SZQM19U';
+
+// India-specific configuration
+$CURRENCY_SYMBOL = '₹';
+$DEFAULT_EXCHANGE = 'BSE'; // BSE or NSE
+// For Alpha Vantage, Indian stocks use .BSE suffix (e.g., RELIANCE.BSE)
+$STOCK_SUFFIX = '.BSE';
 ?>
