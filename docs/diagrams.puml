@@ -170,60 +170,81 @@ Simulation ..> StockDataService : fetches data from
 
 
 ' ===================================================================
-' 4. ER DIAGRAM (Chen-style with Entities, Attributes, Relationships)
+' 4. ER DIAGRAM  (True Chen Notation)
 ' ===================================================================
 @startuml ER_Diagram
-!theme plain
-title Entity-Relationship Diagram \u2014 QuantPath
-
-hide circle
-skinparam linetype ortho
-
-entity "USERS" as users #LightBlue {
-  * <u>id</u> : INT <<PK>>
-  --
-  name : VARCHAR(100)
-  email : VARCHAR(100) <<UNIQUE>>
-  password_hash : VARCHAR(255)
-  bio : TEXT
-  avatar_url : VARCHAR(255)
-  phone : VARCHAR(20)
-  institution : VARCHAR(200)
-  created_at : TIMESTAMP
+allow_mixing
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor LightYellow
+    BorderColor Black
+}
+skinparam rectangle {
+    BackgroundColor LightBlue
+    BorderColor Black
+}
+skinparam diamond {
+    BackgroundColor LightGreen
+    BorderColor Black
 }
 
-entity "SIMULATIONS" as sims #LightGreen {
-  * <u>id</u> : INT <<PK>>
-  --
-  * user_id : INT <<FK>>
-  stock_symbol : VARCHAR(20)
-  model_used : VARCHAR(50)
-  parameters : JSON
-  results_json : JSON
-  created_at : TIMESTAMP
-}
+title Chen Notation ER Diagram - QuantPath
 
-entity "WATCHLIST" as watch #Gold {
-  * <u>id</u> : INT <<PK>>
-  --
-  * user_id : INT <<FK>>
-  stock_symbol : VARCHAR(20)
-  added_at : TIMESTAMP
-}
+' --- Entities (Rectangles) ---
+rectangle "USERS" as USERS
+rectangle "SIMULATIONS" as SIMS
+rectangle "WATCHLIST" as WATCH
+rectangle "COMPARISONS" as COMP
 
-entity "COMPARISONS" as comp #Salmon {
-  * <u>id</u> : INT <<PK>>
-  --
-  * user_id : INT <<FK>>
-  title : VARCHAR(200)
-  simulation_ids : JSON
-  created_at : TIMESTAMP
-}
+' --- Relationships (Diamonds) ---
+diamond "Creates" as relCreates1
+diamond "Manages" as relManages
+diamond "Creates" as relCreates2
+diamond "References" as relRefs
 
-users ||--o{ sims : " creates \n (1:N) "
-users ||--o{ watch : " manages \n (1:N) "
-users ||--o{ comp : " creates \n (1:N) "
-comp }o--|| sims : " references \n (N:1) "
+' --- Attributes for USERS (Ovals) ---
+usecase "<u>id</u>" as u_id
+usecase "name" as u_name
+usecase "email" as u_email
+usecase "password" as u_pass
+USERS -- u_id
+USERS -- u_name
+USERS -- u_email
+USERS -- u_pass
+
+' --- Attributes for SIMULATIONS (Ovals) ---
+usecase "<u>id</u>" as s_id
+usecase "stock_symbol" as s_sym
+usecase "model_used" as s_mod
+SIMS -- s_id
+SIMS -- s_sym
+SIMS -- s_mod
+
+' --- Attributes for WATCHLIST (Ovals) ---
+usecase "<u>id</u>" as w_id
+usecase "stock_symbol" as w_sym
+WATCH -- w_id
+WATCH -- w_sym
+
+' --- Attributes for COMPARISONS (Ovals) ---
+usecase "<u>id</u>" as c_id
+usecase "title" as c_title
+COMP -- c_id
+COMP -- c_title
+
+' --- Connections (Lines with Cardinality) ---
+USERS "1" -- relCreates1
+relCreates1 -- "N" SIMS
+
+USERS "1" -- relManages
+relManages -- "N" WATCH
+
+USERS "1" -- relCreates2
+relCreates2 -- "N" COMP
+
+COMP "N" -- relRefs
+relRefs -- "1" SIMS
 
 @enduml
 
@@ -396,45 +417,46 @@ FE --> User : "Saved!" toast + redirect
 
 
 ' ===================================================================
-' 8. GANTT CHART (Monthly view, color-coded phases)
+' 8. GANTT CHART (Monthly view, large scale)
 ' ===================================================================
 @startgantt Gantt_Chart
-title Project Gantt Chart \u2014 QuantPath Development
-printscale monthly zoom 2
-project starts 2024-12-01
 
--- Requirements & Design --
+printscale monthly zoom 3
+title Project Gantt Chart - QuantPath Development
+Project starts 2024-12-01
+
+-- Requirements and Design --
 [Requirements Analysis] starts 2024-12-08 and ends 2024-12-21
-[Requirements Analysis] is colored in LightBlue
+[Requirements Analysis] is colored in Lavender/LightBlue
 [System Design] starts 2024-12-22 and ends 2025-01-04
-[System Design] is colored in LightBlue
+[System Design] is colored in Lavender/LightBlue
 
--- Database & Backend --
+-- Database and Backend --
 [Database Schema] starts 2025-01-05 and ends 2025-01-11
-[Database Schema] is colored in LightGreen
+[Database Schema] is colored in GreenYellow/Green
 [Authentication Module] starts 2025-01-12 and ends 2025-01-18
-[Authentication Module] is colored in LightGreen
+[Authentication Module] is colored in GreenYellow/Green
 [Backend REST APIs] starts 2025-01-12 and ends 2025-01-25
-[Backend REST APIs] is colored in LightGreen
+[Backend REST APIs] is colored in GreenYellow/Green
 
 -- Frontend Development --
-[Landing Page & UI] starts 2025-01-19 and ends 2025-01-25
-[Landing Page & UI] is colored in Gold
+[Landing Page] starts 2025-01-19 and ends 2025-01-25
+[Landing Page] is colored in Gold/Orange
 [Simulation Engine] starts 2025-01-26 and ends 2025-02-01
-[Simulation Engine] is colored in Gold
+[Simulation Engine] is colored in Gold/Orange
 [Additional Models] starts 2025-02-02 and ends 2025-02-08
-[Additional Models] is colored in Gold
-[Watchlist & Trending] starts 2025-02-02 and ends 2025-02-08
-[Watchlist & Trending] is colored in Gold
-[Dashboard & Compare] starts 2025-02-09 and ends 2025-02-15
-[Dashboard & Compare] is colored in Gold
+[Additional Models] is colored in Gold/Orange
+[Watchlist] starts 2025-02-02 and ends 2025-02-08
+[Watchlist] is colored in Gold/Orange
+[Dashboard] starts 2025-02-09 and ends 2025-02-15
+[Dashboard] is colored in Gold/Orange
 
--- Testing & Documentation --
+-- Testing and Documentation --
 [Integration Testing] starts 2025-02-16 and ends 2025-02-22
-[Integration Testing] is colored in Salmon
-[UI Polish & Bug Fixes] starts 2025-02-16 and ends 2025-02-22
-[UI Polish & Bug Fixes] is colored in Salmon
-[Documentation & Diagrams] starts 2025-02-23 and ends 2025-02-28
-[Documentation & Diagrams] is colored in Salmon
+[Integration Testing] is colored in Salmon/Red
+[UI Polish] starts 2025-02-16 and ends 2025-02-22
+[UI Polish] is colored in Salmon/Red
+[Documentation] starts 2025-02-23 and ends 2025-02-28
+[Documentation] is colored in Salmon/Red
 
 @endgantt
