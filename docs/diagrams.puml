@@ -170,83 +170,60 @@ Simulation ..> StockDataService : fetches data from
 
 
 ' ===================================================================
-' 4. ER DIAGRAM (Chen Notation — Rectangles, Ovals, Diamonds)
+' 4. ER DIAGRAM (Chen-style with Entities, Attributes, Relationships)
 ' ===================================================================
 @startuml ER_Diagram
 !theme plain
-title Entity-Relationship Diagram — Chen Notation
+title Entity-Relationship Diagram \u2014 QuantPath
 
-skinparam defaultFontName Verdana
-skinparam BackgroundColor white
-skinparam RoundCorner 0
+hide circle
+skinparam linetype ortho
 
-' ---- ENTITY: USERS (Rectangle) ----
-rectangle "**USERS**" as users #LightBlue {
-}
-note top of users
-  <u>id</u> (PK) : INT
+entity "USERS" as users #LightBlue {
+  * <u>id</u> : INT <<PK>>
+  --
   name : VARCHAR(100)
-  email : VARCHAR(100) [UNIQUE]
+  email : VARCHAR(100) <<UNIQUE>>
   password_hash : VARCHAR(255)
   bio : TEXT
   avatar_url : VARCHAR(255)
   phone : VARCHAR(20)
   institution : VARCHAR(200)
   created_at : TIMESTAMP
-end note
-
-' ---- ENTITY: SIMULATIONS (Rectangle) ----
-rectangle "**SIMULATIONS**" as sims #LightGreen {
 }
-note bottom of sims
-  <u>id</u> (PK) : INT
-  user_id (FK) : INT
+
+entity "SIMULATIONS" as sims #LightGreen {
+  * <u>id</u> : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
   stock_symbol : VARCHAR(20)
   model_used : VARCHAR(50)
   parameters : JSON
   results_json : JSON
   created_at : TIMESTAMP
-end note
-
-' ---- ENTITY: WATCHLIST (Rectangle) ----
-rectangle "**WATCHLIST**" as watch #LightYellow {
 }
-note bottom of watch
-  <u>id</u> (PK) : INT
-  user_id (FK) : INT
+
+entity "WATCHLIST" as watch #Gold {
+  * <u>id</u> : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
   stock_symbol : VARCHAR(20)
   added_at : TIMESTAMP
-end note
-
-' ---- ENTITY: COMPARISONS (Rectangle) ----
-rectangle "**COMPARISONS**" as comp #LightCoral {
 }
-note bottom of comp
-  <u>id</u> (PK) : INT
-  user_id (FK) : INT
+
+entity "COMPARISONS" as comp #Salmon {
+  * <u>id</u> : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
   title : VARCHAR(200)
   simulation_ids : JSON
   created_at : TIMESTAMP
-end note
+}
 
-' ---- RELATIONSHIPS (Diamonds) ----
-card "<b>Creates</b>" as rel1 #Wheat
-card "<b>Manages</b>" as rel2 #Wheat
-card "<b>Creates</b>" as rel3 #Wheat
-card "<b>References</b>" as rel4 #Wheat
-
-' ---- CONNECTIONS with Cardinality ----
-users "1" -down-> rel1
-rel1 -down-> "0..*" sims
-
-users "1" -down-> rel2
-rel2 -down-> "0..*" watch
-
-users "1" -down-> rel3
-rel3 -down-> "0..*" comp
-
-comp "0..*" -right-> rel4
-rel4 -right-> "1..*" sims
+users ||--o{ sims : " creates \n (1:N) "
+users ||--o{ watch : " manages \n (1:N) "
+users ||--o{ comp : " creates \n (1:N) "
+comp }o--|| sims : " references \n (N:1) "
 
 @enduml
 
@@ -419,53 +396,45 @@ FE --> User : "Saved!" toast + redirect
 
 
 ' ===================================================================
-' 8. GANTT CHART (12 weeks, color-coded phases, milestones, dependencies)
+' 8. GANTT CHART (Monthly view, color-coded phases)
 ' ===================================================================
 @startgantt Gantt_Chart
-title Project Gantt Chart — QuantPath Development
-printscale weekly
-project starts 2024-12-08
+title Project Gantt Chart \u2014 QuantPath Development
+printscale monthly zoom 2
+project starts 2024-12-01
 
--- Phase 0: Project Initiation --
-[Project Kickoff] as [PK] starts 2024-12-08 and ends 2024-12-14
-[PK] is colored in LightGray
+-- Requirements & Design --
+[Requirements Analysis] starts 2024-12-08 and ends 2024-12-21
+[Requirements Analysis] is colored in LightBlue
+[System Design] starts 2024-12-22 and ends 2025-01-04
+[System Design] is colored in LightBlue
 
--- Phase 1: Requirements & Design --
-[Requirements Analysis] as [RA] starts 2024-12-15 and ends 2024-12-21
-[RA] is colored in LightBlue
-[System Design] as [SD] starts after [RA]'s end and ends 2024-12-28
-[SD] is colored in LightBlue
-[Design Complete] happens at [SD]'s end
+-- Database & Backend --
+[Database Schema] starts 2025-01-05 and ends 2025-01-11
+[Database Schema] is colored in LightGreen
+[Authentication Module] starts 2025-01-12 and ends 2025-01-18
+[Authentication Module] is colored in LightGreen
+[Backend REST APIs] starts 2025-01-12 and ends 2025-01-25
+[Backend REST APIs] is colored in LightGreen
 
--- Phase 2: Database & Backend --
-[Database Schema] as [DB] starts after [SD]'s end and ends 2025-01-04
-[DB] is colored in LightGreen
-[Authentication Module] as [AUTH] starts after [DB]'s end and ends 2025-01-11
-[AUTH] is colored in LightGreen
-[Backend REST APIs] as [API] starts after [DB]'s end and ends 2025-01-18
-[API] is colored in LightGreen
-[Backend Ready] happens at [API]'s end
+-- Frontend Development --
+[Landing Page & UI] starts 2025-01-19 and ends 2025-01-25
+[Landing Page & UI] is colored in Gold
+[Simulation Engine] starts 2025-01-26 and ends 2025-02-01
+[Simulation Engine] is colored in Gold
+[Additional Models] starts 2025-02-02 and ends 2025-02-08
+[Additional Models] is colored in Gold
+[Watchlist & Trending] starts 2025-02-02 and ends 2025-02-08
+[Watchlist & Trending] is colored in Gold
+[Dashboard & Compare] starts 2025-02-09 and ends 2025-02-15
+[Dashboard & Compare] is colored in Gold
 
--- Phase 3: Frontend Development --
-[Landing Page & UI] as [LP] starts 2025-01-12 and ends 2025-01-18
-[LP] is colored in Gold
-[Simulation Engine - GBM] as [SIM] starts after [LP]'s end and ends 2025-01-25
-[SIM] is colored in Gold
-[Additional Models] as [MODELS] starts after [SIM]'s end and ends 2025-02-01
-[MODELS] is colored in Gold
-[Watchlist & Trending] as [WL] starts after [MODELS]'s end and ends 2025-02-08
-[WL] is colored in Gold
-[Dashboard & Compare] as [DASH] starts after [WL]'s end and ends 2025-02-15
-[DASH] is colored in Gold
-[Frontend Complete] happens at [DASH]'s end
-
--- Phase 4: Testing & Documentation --
-[Integration Testing] as [TEST] starts after [DASH]'s end and ends 2025-02-22
-[TEST] is colored in Salmon
-[UI Polish & Bug Fixes] as [POLISH] starts after [DASH]'s end and ends 2025-02-22
-[POLISH] is colored in Salmon
-[Documentation & Diagrams] as [DOCS] starts after [TEST]'s end and ends 2025-02-27
-[DOCS] is colored in Salmon
-[Project Delivery] happens at [DOCS]'s end
+-- Testing & Documentation --
+[Integration Testing] starts 2025-02-16 and ends 2025-02-22
+[Integration Testing] is colored in Salmon
+[UI Polish & Bug Fixes] starts 2025-02-16 and ends 2025-02-22
+[UI Polish & Bug Fixes] is colored in Salmon
+[Documentation & Diagrams] starts 2025-02-23 and ends 2025-02-28
+[Documentation & Diagrams] is colored in Salmon
 
 @endgantt
