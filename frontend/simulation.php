@@ -129,28 +129,28 @@ $conn->close();
               <label class="block text-xs text-slate-400 font-medium mb-2">Simulation Model</label>
               <input type="hidden" id="model-select" value="gbm">
               <div class="grid grid-cols-2 gap-2" id="model-cards">
-                <div class="model-card selected" data-model="gbm" onclick="selectModel('gbm', this)">
+                <div class="model-card selected" data-model="gbm">
                   <div class="flex items-center gap-2">
-                    <div class="model-dot" style="background: #6366f1; box-shadow: 0 0 8px rgba(99,102,241,0.5);"></div>
+                    <div class="model-dot" style="background:#6366f1;box-shadow:0 0 8px rgba(99,102,241,0.5)"></div>
                     <span class="text-xs font-semibold text-white">Monte Carlo</span>
                   </div>
                   <div class="text-[10px] text-slate-500 mt-1 pl-[18px]">GBM (Geometric Brownian)</div>
                 </div>
-                <div class="model-card" data-model="mean-reversion" onclick="selectModel('mean-reversion', this)">
+                <div class="model-card" data-model="mean-reversion">
                   <div class="flex items-center gap-2">
                     <div class="model-dot"></div>
                     <span class="text-xs font-semibold text-white">Mean Reversion</span>
                   </div>
                   <div class="text-[10px] text-slate-500 mt-1 pl-[18px]">Ornstein-Uhlenbeck</div>
                 </div>
-                <div class="model-card" data-model="jump-diffusion" onclick="selectModel('jump-diffusion', this)">
+                <div class="model-card" data-model="jump-diffusion">
                   <div class="flex items-center gap-2">
                     <div class="model-dot"></div>
                     <span class="text-xs font-semibold text-white">Jump Diffusion</span>
                   </div>
                   <div class="text-[10px] text-slate-500 mt-1 pl-[18px]">Merton Model</div>
                 </div>
-                <div class="model-card" data-model="garch" onclick="selectModel('garch', this)">
+                <div class="model-card" data-model="garch">
                   <div class="flex items-center gap-2">
                     <div class="model-dot"></div>
                     <span class="text-xs font-semibold text-white">GARCH</span>
@@ -371,8 +371,11 @@ $conn->close();
     let pathChart = null;
     let distChart = null;
 
-    // Toggle model-specific parameters
-    function selectModel(model, card) {
+    // Toggle model-specific parameters — use event delegation
+    document.getElementById('model-cards').addEventListener('click', function(e) {
+      const card = e.target.closest('.model-card');
+      if (!card) return;
+      const model = card.dataset.model;
       document.getElementById('model-select').value = model;
       // Update card visual state
       document.querySelectorAll('.model-card').forEach(c => {
@@ -389,8 +392,8 @@ $conn->close();
       document.getElementById('mr-params').classList.toggle('hidden', model !== 'mean-reversion');
       document.getElementById('jd-params').classList.toggle('hidden', model !== 'jump-diffusion');
       document.getElementById('garch-params').classList.toggle('hidden', model !== 'garch');
-    }
-    function toggleModelParams() { /* handled by selectModel */ }
+    });
+    function toggleModelParams() { /* handled by event delegation */ }
 
     // --- Box-Muller Transform for proper normal distribution ---
     function randNormal() {

@@ -16,26 +16,34 @@ if ($user_id) {
 }
 $conn->close();
 
-// Pre-defined trending stocks data
+// Pre-defined trending stocks data with prices and signals
 $trending_stocks = [
-    ['symbol' => 'RELIANCE.BSE', 'name' => 'Reliance Industries', 'sector' => 'Energy'],
-    ['symbol' => 'TCS.BSE', 'name' => 'Tata Consultancy', 'sector' => 'IT'],
-    ['symbol' => 'INFY.BSE', 'name' => 'Infosys Ltd', 'sector' => 'IT'],
-    ['symbol' => 'HDFCBANK.BSE', 'name' => 'HDFC Bank', 'sector' => 'Banking'],
-    ['symbol' => 'ICICIBANK.BSE', 'name' => 'ICICI Bank', 'sector' => 'Banking'],
-    ['symbol' => 'WIPRO.BSE', 'name' => 'Wipro Ltd', 'sector' => 'IT'],
-    ['symbol' => 'SBIN.BSE', 'name' => 'State Bank of India', 'sector' => 'Banking'],
-    ['symbol' => 'BHARTIARTL.BSE', 'name' => 'Bharti Airtel', 'sector' => 'Telecom'],
-    ['symbol' => 'KOTAKBANK.BSE', 'name' => 'Kotak Mahindra Bank', 'sector' => 'Banking'],
-    ['symbol' => 'LT.BSE', 'name' => 'Larsen & Toubro', 'sector' => 'Infrastructure'],
+    ['symbol' => 'RELIANCE.BSE', 'name' => 'Reliance Industries', 'sector' => 'Energy', 'price' => 2945.60, 'change' => +1.82],
+    ['symbol' => 'TCS.BSE', 'name' => 'Tata Consultancy', 'sector' => 'IT', 'price' => 3872.15, 'change' => +0.65],
+    ['symbol' => 'INFY.BSE', 'name' => 'Infosys Ltd', 'sector' => 'IT', 'price' => 1856.30, 'change' => -0.42],
+    ['symbol' => 'HDFCBANK.BSE', 'name' => 'HDFC Bank', 'sector' => 'Banking', 'price' => 1724.80, 'change' => +1.15],
+    ['symbol' => 'ICICIBANK.BSE', 'name' => 'ICICI Bank', 'sector' => 'Banking', 'price' => 1089.55, 'change' => +0.93],
+    ['symbol' => 'WIPRO.BSE', 'name' => 'Wipro Ltd', 'sector' => 'IT', 'price' => 562.40, 'change' => -1.27],
+    ['symbol' => 'SBIN.BSE', 'name' => 'State Bank of India', 'sector' => 'Banking', 'price' => 745.90, 'change' => +2.14],
+    ['symbol' => 'BHARTIARTL.BSE', 'name' => 'Bharti Airtel', 'sector' => 'Telecom', 'price' => 1632.75, 'change' => +0.38],
+    ['symbol' => 'KOTAKBANK.BSE', 'name' => 'Kotak Mahindra Bank', 'sector' => 'Banking', 'price' => 1798.20, 'change' => -0.56],
+    ['symbol' => 'LT.BSE', 'name' => 'Larsen & Toubro', 'sector' => 'Infrastructure', 'price' => 3428.90, 'change' => +1.47],
 ];
 
 $top_performers = [
-    ['symbol' => 'TATAMOTORS.BSE', 'name' => 'Tata Motors', 'sector' => 'Auto', 'badge' => 'Top Gainer'],
-    ['symbol' => 'ADANIENT.BSE', 'name' => 'Adani Enterprises', 'sector' => 'Conglomerate', 'badge' => 'High Volume'],
-    ['symbol' => 'BAJFINANCE.BSE', 'name' => 'Bajaj Finance', 'sector' => 'NBFC', 'badge' => 'Momentum'],
-    ['symbol' => 'HCLTECH.BSE', 'name' => 'HCL Technologies', 'sector' => 'IT', 'badge' => 'Breakout'],
-    ['symbol' => 'MARUTI.BSE', 'name' => 'Maruti Suzuki', 'sector' => 'Auto', 'badge' => 'Trending'],
+    ['symbol' => 'TATAMOTORS.BSE', 'name' => 'Tata Motors', 'sector' => 'Auto', 'badge' => 'Top Gainer', 'price' => 987.45, 'change' => +4.82],
+    ['symbol' => 'ADANIENT.BSE', 'name' => 'Adani Enterprises', 'sector' => 'Conglomerate', 'badge' => 'High Volume', 'price' => 3124.60, 'change' => +3.56],
+    ['symbol' => 'BAJFINANCE.BSE', 'name' => 'Bajaj Finance', 'sector' => 'NBFC', 'badge' => 'Momentum', 'price' => 7235.80, 'change' => +2.91],
+    ['symbol' => 'HCLTECH.BSE', 'name' => 'HCL Technologies', 'sector' => 'IT', 'badge' => 'Breakout', 'price' => 1789.30, 'change' => +2.14],
+    ['symbol' => 'MARUTI.BSE', 'name' => 'Maruti Suzuki', 'sector' => 'Auto', 'badge' => 'Trending', 'price' => 12450.50, 'change' => +1.73],
+];
+
+$low_performers = [
+    ['symbol' => 'VEDL.BSE', 'name' => 'Vedanta Ltd', 'sector' => 'Mining', 'badge' => 'Top Loser', 'price' => 412.30, 'change' => -4.15],
+    ['symbol' => 'INDUSINDBK.BSE', 'name' => 'IndusInd Bank', 'sector' => 'Banking', 'badge' => 'Under Pressure', 'price' => 1045.60, 'change' => -3.28],
+    ['symbol' => 'ZOMATO.BSE', 'name' => 'Zomato Ltd', 'sector' => 'Tech', 'badge' => 'Sell Signal', 'price' => 178.90, 'change' => -2.76],
+    ['symbol' => 'PAYTM.BSE', 'name' => 'One97 Communications', 'sector' => 'Fintech', 'badge' => 'Weak', 'price' => 398.25, 'change' => -2.45],
+    ['symbol' => 'YESBANK.BSE', 'name' => 'Yes Bank', 'sector' => 'Banking', 'badge' => 'Declining', 'price' => 22.65, 'change' => -1.92],
 ];
 
 $watchlist_symbols = array_column($watchlist_items, 'stock_symbol');
@@ -168,14 +176,24 @@ $watchlist_symbols = array_column($watchlist_items, 'stock_symbol');
         </div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <?php foreach ($trending_stocks as $ts): ?>
-          <?php $isInWatchlist = in_array($ts['symbol'], $watchlist_symbols); ?>
+          <?php $isInWatchlist = in_array($ts['symbol'], $watchlist_symbols); $isUp = $ts['change'] >= 0; ?>
           <div class="trending-card glass rounded-xl p-4 text-center relative" id="trending-<?php echo htmlspecialchars($ts['symbol']); ?>">
             <div class="w-10 h-10 mx-auto mb-2 bg-indigo-500/15 rounded-lg flex items-center justify-center text-indigo-300 font-bold text-sm">
               <?php echo strtoupper(substr($ts['symbol'], 0, 2)); ?>
             </div>
             <div class="text-sm font-semibold text-white truncate"><?php echo htmlspecialchars($ts['symbol']); ?></div>
             <div class="text-xs text-slate-500 truncate"><?php echo $ts['name']; ?></div>
-            <div class="text-xs text-slate-600 mt-1"><?php echo $ts['sector']; ?></div>
+            <div class="mt-2 text-lg font-bold <?php echo $isUp ? 'text-green-400' : 'text-red-400'; ?>">₹<?php echo number_format($ts['price'], 2); ?></div>
+            <div class="flex items-center justify-center gap-1 mt-1">
+              <?php if ($isUp): ?>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><path d="M18 15l-6-6-6 6"/></svg>
+                <span class="text-xs font-semibold text-green-400">+<?php echo $ts['change']; ?>%</span>
+              <?php else: ?>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="text-xs font-semibold text-red-400"><?php echo $ts['change']; ?>%</span>
+              <?php endif; ?>
+            </div>
+            <div class="text-[10px] text-slate-600 mt-1"><?php echo $ts['sector']; ?></div>
             <?php if ($isInWatchlist): ?>
               <div class="mt-2 badge added-badge">Added</div>
             <?php else: ?>
@@ -212,12 +230,65 @@ $watchlist_symbols = array_column($watchlist_items, 'stock_symbol');
                 <div class="text-xs text-slate-500 truncate"><?php echo $tp['name']; ?></div>
               </div>
             </div>
+            <div class="flex items-center justify-between">
+              <div class="text-base font-bold text-green-400">₹<?php echo number_format($tp['price'], 2); ?></div>
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><path d="M18 15l-6-6-6 6"/></svg>
+                <span class="text-xs font-semibold text-green-400">+<?php echo $tp['change']; ?>%</span>
+              </div>
+            </div>
             <div class="flex items-center justify-between mt-2">
               <span class="badge bg-green-500/15 text-green-300"><?php echo $tp['badge']; ?></span>
               <?php if ($isInWatchlist): ?>
                 <span class="badge added-badge">Added</span>
               <?php else: ?>
                 <button onclick="quickAdd('<?php echo htmlspecialchars($tp['symbol']); ?>', this)" class="px-3 py-1 bg-green-500/15 text-green-300 rounded-lg text-xs font-medium hover:bg-green-500/25 transition">
+                  + Add
+                </button>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <!-- Low Performers -->
+      <div class="glass rounded-2xl p-6 mb-6 fade-in">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+              Low Performers
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Stocks under selling pressure — high risk, watch closely</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <?php foreach ($low_performers as $lp): ?>
+          <?php $isInWatchlist = in_array($lp['symbol'], $watchlist_symbols); ?>
+          <div class="trending-card glass rounded-xl p-4 relative" style="border-color:rgba(248,113,113,0.1)" id="low-<?php echo htmlspecialchars($lp['symbol']); ?>">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 bg-red-500/15 rounded-lg flex items-center justify-center text-red-300 font-bold text-sm flex-shrink-0">
+                <?php echo strtoupper(substr($lp['symbol'], 0, 2)); ?>
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-white truncate"><?php echo htmlspecialchars($lp['symbol']); ?></div>
+                <div class="text-xs text-slate-500 truncate"><?php echo $lp['name']; ?></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="text-base font-bold text-red-400">₹<?php echo number_format($lp['price'], 2); ?></div>
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="text-xs font-semibold text-red-400"><?php echo $lp['change']; ?>%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-2">
+              <span class="badge bg-red-500/15 text-red-300"><?php echo $lp['badge']; ?></span>
+              <?php if ($isInWatchlist): ?>
+                <span class="badge added-badge">Added</span>
+              <?php else: ?>
+                <button onclick="quickAdd('<?php echo htmlspecialchars($lp['symbol']); ?>', this)" class="px-3 py-1 bg-red-500/15 text-red-300 rounded-lg text-xs font-medium hover:bg-red-500/25 transition">
                   + Add
                 </button>
               <?php endif; ?>
