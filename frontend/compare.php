@@ -157,32 +157,6 @@ $conn->close();
 
   <script src="/quantpath/assets/js/api.js?v=2"></script>
   <script>
-    // Define a basic Toast if not globally available from api.js
-    const Toast = window.Toast || {
-      container: null,
-      init() {
-        if(!this.container){
-            this.container = document.getElementById('toast-container');
-            if(!this.container){
-                this.container = document.createElement('div');
-                this.container.id = 'toast-container';
-                this.container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-3';
-                document.body.appendChild(this.container);
-            }
-        }
-      },
-      show(msg, type='info') {
-        this.init();
-        const t = document.createElement('div');
-        const bg = type==='error'?'#ef4444':type==='success'?'#10b981':'#6366f1';
-        t.style.cssText = `background:${bg};color:white;padding:12px 20px;border-radius:12px;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,0.3);transform:translateX(120%);transition:transform 0.3s;`;
-        t.innerHTML = msg;
-        this.container.appendChild(t);
-        requestAnimationFrame(() => t.style.transform = "translateX(0)");
-        setTimeout(() => { t.style.transform = "translateX(120%)"; setTimeout(() => t.remove(), 300); }, 3000);
-      }
-    };
-
     // Proper Box-Muller random normal distribution
     function randNormal() {
       let u = 0, v = 0;
@@ -192,11 +166,15 @@ $conn->close();
     }
     
     document.getElementById('compare-btn').addEventListener('click', async () => {
-      const s1 = document.getElementById('stock1').value.trim().toUpperCase();
-      const s2 = document.getElementById('stock2').value.trim().toUpperCase();
-      const s3 = document.getElementById('stock3').value.trim().toUpperCase();
+      let s1 = document.getElementById('stock1').value.trim().toUpperCase() || 'RELIANCE.BSE';
+      let s2 = document.getElementById('stock2').value.trim().toUpperCase() || 'TCS.BSE';
+      let s3 = document.getElementById('stock3').value.trim().toUpperCase();
       
-      if (!s1 || !s2) { Toast.show('Stock 1 and Stock 2 are required', 'warning'); return; }
+      const appendSuffix = (sym) => sym && !sym.includes('.') ? sym + '.BSE' : sym;
+      s1 = appendSuffix(s1);
+      s2 = appendSuffix(s2);
+      s3 = appendSuffix(s3);
+      
       const tickers = [s1, s2];
       if (s3) tickers.push(s3);
       

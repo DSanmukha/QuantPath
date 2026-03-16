@@ -47,6 +47,14 @@ $conn->close();
     .model-card.selected { border-color: rgba(99,102,241,0.5); background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08)); box-shadow: 0 0 20px rgba(99,102,241,0.1); }
     .model-card.selected .model-dot { background: #6366f1; box-shadow: 0 0 8px rgba(99,102,241,0.5); }
     .model-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); transition: all 0.25s; flex-shrink: 0; }
+    /* RSI Gauge */
+    .rsi-gauge { position: relative; width: 140px; height: 80px; margin: 0 auto; }
+    .rsi-gauge-bg { width: 140px; height: 70px; border-radius: 70px 70px 0 0; background: conic-gradient(from 180deg at 50% 100%, #ef4444 0deg, #f59e0b 54deg, #22c55e 90deg, #22c55e 126deg, #f59e0b 162deg, #ef4444 180deg); overflow: hidden; }
+    .rsi-gauge-mask { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 50px; border-radius: 50px 50px 0 0; background: #0f172a; }
+    .rsi-needle { position: absolute; bottom: 2px; left: 50%; width: 2px; height: 52px; background: white; transform-origin: bottom center; border-radius: 2px; transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+    .rsi-dot { position: absolute; bottom: -3px; left: 50%; width: 8px; height: 8px; background: white; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 0 8px rgba(255,255,255,0.5); }
+    .analysis-card { background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; transition: all 0.3s; }
+    .analysis-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
   </style>
 </head>
 <body class="min-h-screen text-slate-100 flex">
@@ -171,6 +179,8 @@ $conn->close();
             </button>
 
             <div id="fetch-status" class="hidden text-xs p-3 rounded-lg"></div>
+
+
 
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -333,6 +343,44 @@ $conn->close();
             <canvas id="distChart"></canvas>
           </div>
         </section>
+
+        <!-- Stock Analysis Panel (shown after fetch) -->
+        <section id="stock-analysis" class="glass rounded-2xl p-6 fade-in mt-6" style="display:none;">
+          <h3 class="text-lg font-bold text-white mb-1">Stock Analysis</h3>
+          <p class="text-xs text-slate-500 mb-4">Technical indicators from historical data</p>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- RSI Gauge -->
+            <div class="analysis-card text-center">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">RSI (14-Period)</div>
+              <div class="rsi-gauge mx-auto">
+                <div class="rsi-gauge-bg"></div>
+                <div class="rsi-gauge-mask"></div>
+                <div id="rsi-needle" class="rsi-needle" style="transform: rotate(-90deg);"></div>
+                <div class="rsi-dot"></div>
+              </div>
+              <div id="rsi-value" class="text-2xl font-bold text-white mt-1">—</div>
+              <div id="rsi-label" class="text-xs font-semibold mt-0.5 px-2 py-0.5 rounded-full inline-block">—</div>
+            </div>
+            <!-- Drift Card -->
+            <div class="analysis-card text-center">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-3">Drift (μ)</div>
+              <div id="analysis-drift" class="text-2xl font-bold text-white">—</div>
+              <div id="analysis-drift-label" class="text-xs mt-1.5">—</div>
+            </div>
+            <!-- Volatility Card -->
+            <div class="analysis-card text-center">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-3">Volatility (σ)</div>
+              <div id="analysis-vol" class="text-2xl font-bold text-white">—</div>
+              <div id="analysis-vol-label" class="text-xs mt-1.5">—</div>
+            </div>
+            <!-- Current Price -->
+            <div class="analysis-card text-center">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-3">Last Close Price</div>
+              <div id="analysis-price" class="text-2xl font-bold text-indigo-300">—</div>
+              <div id="analysis-points" class="text-xs text-slate-500 mt-1.5">— data points</div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -344,6 +392,7 @@ $conn->close();
     let lastResults = null;
     let pathChart = null;
     let distChart = null;
+    let fetchedAnalysis = null; // Store fetched RSI/drift/vol for display after simulation
 
     // Toggle model-specific parameters — use event delegation
     document.getElementById('model-cards').addEventListener('click', function(e) {
@@ -417,6 +466,91 @@ $conn->close();
     }
     initCharts();
 
+    // --- RSI Calculation ---
+    function calculateRSI(prices, period = 14) {
+      if (prices.length < period + 1) return null;
+      const changes = [];
+      for (let i = 1; i < prices.length; i++) {
+        changes.push(prices[i] - prices[i - 1]);
+      }
+      // Initial average gain/loss
+      let avgGain = 0, avgLoss = 0;
+      for (let i = 0; i < period; i++) {
+        if (changes[i] > 0) avgGain += changes[i];
+        else avgLoss += Math.abs(changes[i]);
+      }
+      avgGain /= period;
+      avgLoss /= period;
+      // Smoothed RSI (Wilder's method)
+      for (let i = period; i < changes.length; i++) {
+        const change = changes[i];
+        avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
+        avgLoss = (avgLoss * (period - 1) + (change < 0 ? Math.abs(change) : 0)) / period;
+      }
+      if (avgLoss === 0) return 100;
+      const rs = avgGain / avgLoss;
+      return 100 - (100 / (1 + rs));
+    }
+
+    // --- Update Analysis Panel ---
+    function updateAnalysisPanel(rsi, mu, sigma, lastPrice, dataPoints) {
+      const panel = document.getElementById('stock-analysis');
+      panel.style.display = 'block';
+
+      // RSI gauge needle: RSI 0 = -90deg, RSI 100 = +90deg
+      const needleAngle = -90 + (rsi / 100) * 180;
+      document.getElementById('rsi-needle').style.transform = `rotate(${needleAngle}deg)`;
+      document.getElementById('rsi-value').textContent = rsi.toFixed(1);
+
+      const rsiLabel = document.getElementById('rsi-label');
+      if (rsi >= 70) {
+        rsiLabel.textContent = '⬆ Overbought';
+        rsiLabel.className = 'text-xs font-semibold mt-0.5 px-2 py-0.5 rounded-full inline-block bg-red-500/20 text-red-300';
+      } else if (rsi <= 30) {
+        rsiLabel.textContent = '⬇ Oversold';
+        rsiLabel.className = 'text-xs font-semibold mt-0.5 px-2 py-0.5 rounded-full inline-block bg-emerald-500/20 text-emerald-300';
+      } else {
+        rsiLabel.textContent = '↔ Neutral';
+        rsiLabel.className = 'text-xs font-semibold mt-0.5 px-2 py-0.5 rounded-full inline-block bg-blue-500/20 text-blue-300';
+      }
+
+      // Drift card
+      const driftEl = document.getElementById('analysis-drift');
+      const driftLabelEl = document.getElementById('analysis-drift-label');
+      driftEl.textContent = mu.toFixed(4);
+      if (mu > 0) {
+        driftEl.className = 'text-2xl font-bold text-green-300';
+        driftLabelEl.textContent = '↑ Positive trend';
+        driftLabelEl.className = 'text-xs mt-1.5 text-green-400';
+      } else {
+        driftEl.className = 'text-2xl font-bold text-red-300';
+        driftLabelEl.textContent = '↓ Negative trend';
+        driftLabelEl.className = 'text-xs mt-1.5 text-red-400';
+      }
+
+      // Volatility card
+      const volEl = document.getElementById('analysis-vol');
+      const volLabelEl = document.getElementById('analysis-vol-label');
+      volEl.textContent = sigma.toFixed(4);
+      if (sigma > 0.4) {
+        volEl.className = 'text-2xl font-bold text-red-300';
+        volLabelEl.textContent = '🔴 High Risk';
+        volLabelEl.className = 'text-xs mt-1.5 text-red-400';
+      } else if (sigma > 0.25) {
+        volEl.className = 'text-2xl font-bold text-yellow-300';
+        volLabelEl.textContent = '🟡 Medium Risk';
+        volLabelEl.className = 'text-xs mt-1.5 text-yellow-400';
+      } else {
+        volEl.className = 'text-2xl font-bold text-green-300';
+        volLabelEl.textContent = '🟢 Low Risk';
+        volLabelEl.className = 'text-xs mt-1.5 text-green-400';
+      }
+
+      // Price & data points
+      document.getElementById('analysis-price').textContent = '₹' + lastPrice.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('analysis-points').textContent = dataPoints + ' data points';
+    }
+
     // --- Fetch Data ---
     document.getElementById('fetch-btn').addEventListener('click', async () => {
       const ticker = document.getElementById('ticker').value.trim() || 'RELIANCE.BSE';
@@ -428,6 +562,8 @@ $conn->close();
       statusEl.className = 'text-xs p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300';
       statusEl.textContent = 'Fetching data for ' + ticker + '...';
       statusEl.style.display = 'block';
+      document.getElementById('stock-analysis').style.display = 'none';
+      fetchedAnalysis = null;
 
       try {
         const data = await API.fetchStock(ticker);
@@ -452,17 +588,22 @@ $conn->close();
         const annualizedMu = avgReturn * 252;
         const annualizedSigma = dailyVol * Math.sqrt(252);
 
+        // Calculate RSI and store for later
+        const rsi = calculateRSI(prices);
+        fetchedAnalysis = { rsi, mu: annualizedMu, sigma: annualizedSigma, lastPrice, dataPoints: prices.length };
+
         document.getElementById('s0').value = lastPrice.toFixed(2);
         document.getElementById('mu').value = annualizedMu.toFixed(4);
         document.getElementById('sigma').value = annualizedSigma.toFixed(4);
 
         statusEl.className = 'text-xs p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-300';
-        statusEl.innerHTML = `<strong>${ticker}</strong> — Last: ₹${lastPrice.toLocaleString('en-IN', {minimumFractionDigits:2})} | μ = ${annualizedMu.toFixed(4)} | σ = ${annualizedSigma.toFixed(4)} | ${prices.length} data points`;
+        statusEl.innerHTML = `<strong>${ticker}</strong> — Last: ₹${lastPrice.toLocaleString('en-IN', {minimumFractionDigits:2})} | ${prices.length} data points`;
 
         Toast.show(`Stock data loaded for ${ticker}`, 'success');
       } catch (e) {
         statusEl.className = 'text-xs p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300';
         statusEl.textContent = e.message;
+        fetchedAnalysis = null;
         Toast.show(e.message, 'error');
       }
       fetchBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Fetch Stock Data';
@@ -635,6 +776,14 @@ $conn->close();
         if (saveBtn) saveBtn.disabled = false;
 
         lastResults = { simResults, mean, median, stddev, ci95Low, ci95High, var5, params: {S0: s0, mu, sigma, paths: numPaths, steps, T}, model };
+
+        // Show analysis panel with fetched data (or use current params)
+        if (fetchedAnalysis && fetchedAnalysis.rsi !== null) {
+          updateAnalysisPanel(fetchedAnalysis.rsi, fetchedAnalysis.mu, fetchedAnalysis.sigma, fetchedAnalysis.lastPrice, fetchedAnalysis.dataPoints);
+        } else {
+          // No fetch was done, show drift/vol from manual inputs (no RSI)
+          updateAnalysisPanel(50, mu, sigma, s0, 0);
+        }
 
         runBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Simulation';
         runBtn.disabled = false;

@@ -17,6 +17,16 @@ if (!$apiKey) {
 $function = $_GET['function'] ?? 'TIME_SERIES_DAILY';
 $outputsize = $_GET['outputsize'] ?? 'compact';
 
+// Cache configuration
+$cacheDir = __DIR__ . '/cache';
+$cacheFile = $cacheDir . '/' . md5($symbol . '_' . $function . '_' . $outputsize) . '.json';
+$cacheTime = 86400; // 24 hours
+
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTime) {
+    echo file_get_contents($cacheFile);
+    exit;
+}
+
 // Build URL
 $url = "https://www.alphavantage.co/query?function=" . urlencode($function)
      . "&symbol=" . urlencode($symbol)
@@ -40,11 +50,16 @@ if (isset($data['Error Message'])) {
     echo json_encode(['error' => $data['Error Message']]);
     exit;
 }
-if (isset($data['Note'])) {
+if (isset($data['Note']) || isset($data['Information'])) {
     // Rate limit reached
     http_response_code(429);
     echo json_encode(['error' => 'API rate limit reached. Please wait a minute and try again.']);
     exit;
+}
+
+// Save to cache
+if (!empty($data) && !isset($data['error'])) {
+    @file_put_contents($cacheFile, $response);
 }
 
 echo $response;
