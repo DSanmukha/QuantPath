@@ -1,3 +1,57 @@
+## SYNOPSIS
+
+QuantPath is a comprehensive web-based quantitative stock simulation platform designed to help Indian retail investors, finance students, and educators simulate future stock prices, monitor risk metrics, compare investment options, and maintain complete financial awareness through advanced mathematical modelling.
+
+In today's digital age, where India's stock market is growing at an unprecedented pace with over 10 crore active demat accounts and millions of first-time retail investors entering the market every year, there is a growing need for analytical tools that can provide real-time, data-driven insights into stock price behaviour, volatility, and investment risk. Traditional methods of stock analysis, such as relying on broker recommendations, reading financial news, or performing manual calculations on spreadsheets, are time-consuming, prone to errors, and lack the mathematical sophistication required for effective investment decision-making.
+
+This project addresses these limitations by offering an intuitive, secure, and feature-rich platform that automates stock price simulation, enables intelligent risk monitoring, and generates comprehensive financial insights using four stochastic models — Geometric Brownian Motion (GBM), Ornstein-Uhlenbeck Mean Reversion, Merton Jump Diffusion, and GARCH(1,1) volatility clustering. Personal investment decision-making has become a critical concern for individuals across all income levels and experience backgrounds, as many retail investors struggle with quantifying risk and lack awareness of the statistical range of possible future stock prices, often resulting in uninformed buying and selling decisions, failure to set realistic price targets or stop-loss levels, poor comparison of risk versus return across different stocks, limited understanding of how market volatility and drift affect long-term wealth, and challenges in applying quantitative finance concepts without expensive professional tools.
+
+COLLEGE NAME i | P a g e
+
+---
+
+## TABLE OF CONTENTS
+
+| Sl. No. | Title                                            | Page No. |
+| ------- | ------------------------------------------------ | -------- |
+| 1.      | Introduction                                     | 1        |
+| 2.      | Problem Statement                                | 2        |
+| 3.      | Objectives                                       | 3-4      |
+| 4.      | System Study                                     | 5-6      |
+| 5.      | System Requirements                              | 7        |
+| 5.1     | Hardware Requirements                            | 7        |
+| 5.2     | Software Requirements                            | 7-8      |
+| 6.      | Technology Stack                                 | 9-11     |
+| 7.      | System Design                                    | 12       |
+| 7.1     | ER Diagram                                       | 13-14    |
+| 7.2     | Data Flow Diagram (DFD)                          | 14       |
+| 7.2.1   | Level 0 DFD                                      | 14       |
+| 7.2.2   | Level 1 DFD                                      | 15       |
+| 7.3     | Gantt Chart                                      | 16       |
+| 7.4     | Table Design                                     | 17       |
+| 8.      | Input/Output Design                              | 18       |
+| 8.1     | User Dashboard Code                              | 18-41    |
+| 9.      | Expected Outcomes                                | 42-43    |
+| 10.     | Testing                                          | 44       |
+| 10.1    | Test Cases                                       | 45       |
+| 11.     | Validation                                       | 46-47    |
+| 11.1    | Input Validation                                 | 46       |
+| 11.2    | Form Validation                                  | 46       |
+| 11.3    | Data Type Validation                             | 46       |
+| 11.4    | Range Validation                                 | 47       |
+| 11.5    | Database Validation                              | 47       |
+| 11.6    | Error Handling                                   | 47       |
+| 12.     | Conclusion & Future Enhancement                  | 48       |
+| 12.1    | Conclusion                                       | 48       |
+| 12.2    | Future Enhancement                               | 48       |
+| 13.     | Bibliography                                     | 49-50    |
+| 14.     | Appendices                                       | 51       |
+| 14.1    | Screenshots                                      | 52-53    |
+
+COLLEGE NAME ii | P a g e
+
+---
+
 COLLEGE NAME 1 | P a g e
 
 ## 1.0 INTRODUCTION
